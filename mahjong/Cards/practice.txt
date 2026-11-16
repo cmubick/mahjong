@@ -1,0 +1,72 @@
+# The Tuesday Games practice card.
+#
+# These hands were written for this game. They are not the hands of any
+# National Mah Jongg League card.
+#
+# Each hand is one line:  X|C  value  groups...  ; note
+#   X  the hand may be exposed      C  the hand must stay concealed
+#
+# A group is a run of identical letters or digits. 222 is a pung of 2s,
+# NEWS is four single winds, 2026 is four singles. A group of 3 or more may
+# use jokers; singles and pairs may not.
+#
+#   1-9   a number                 0     soap (the white dragon) as a zero
+#   a-i   a number that can be any 1-9: b is one more than a, c two more, ...
+#   F     flower                   N E W S   winds
+#   R G   red and green dragons    D     the dragon of the group's suit
+#
+# Numbers and D need a suit after a slash: /A, /B or /C. These stand for
+# any suits, but different letters always mean different suits.
+
+id: practice
+title: Practice Card
+year: 2026
+
+section: 2026
+X 25 FFF 2026/A 222/B 6666/B ; 2026 in one suit, 2s and 6s in another
+X 30 NN 2026/A EEE WWW SS ; 2026 in any suit
+C 35 2026/A 2026/B 6666/C DD/C ; Three suits, dragon matches the 6s
+
+section: 2468
+X 25 FF 444/A 6666/A 888/B 22/B ; Any 2 suits
+C 30 2468/A 2468/B 222/C 888/C ; Any 3 suits
+X 25 FFF 44/A 666/A DDDD/A 88/A ; One suit with its own dragon
+X 30 22/A 44/B 666/C 8888/C DDD/A ; Any 3 suits, dragon matches the 2s
+
+section: Like Numbers
+X 30 aaa/A DDD/A aaaa/B DDDD/B ; Any like numbers, each with its own dragon
+X 30 NEWS aaa/A aaaa/B aaa/C ; Any like numbers in 3 suits
+C 35 FFFF aa/A aa/B aaaa/C DD/A ; Any like numbers in 3 suits
+
+section: Runs
+X 25 aaa/A bbbb/A ccc/A dddd/A ; Any 4 numbers in a row, one suit
+X 30 FF abc/A aaa/B bbb/B ccc/B ; Any 3 numbers in a row, 2 suits
+X 30 aaaa/A bbbb/B cccc/C NN ; Any 3 numbers in a row, 3 suits
+C 40 abcde/A abcde/B FFFF ; Any 5 numbers in a row, 2 suits
+
+section: 13579
+X 25 F 111/A 333/A 5555/B 999/B ; Any 2 suits
+C 40 13579/A 13579/B 55/C NN ; Any 3 suits
+X 25 777/A 999/A 1111/B 333/B F ; Any 2 suits
+X 30 FF 55/A 55/B 5555/C DDDD/C ; 3 suits, dragon matches the kong of 5s
+
+section: Winds and Dragons
+X 25 NNNN EEE WWW SSSS
+X 30 NN EEEE WWWW SS FF
+X 25 RRR GGG 0000 NEWS
+X 25 FFFF DDD/A DDD/B NNNN ; Any 2 dragons
+C 50 NEWS NEWS RR GG 00
+
+section: 369
+X 25 333/A 666/A 9999/A DDDD/B ; One suit, any other dragon
+X 25 FFF 3333/A 666/B 9999/C ; Any 3 suits
+C 35 369/A 369/B 3333/C 99/C NN ; Any 3 suits
+
+section: Quints
+X 40 FFFFF aaaaa/A bbbb/B ; Any 2 numbers in a row, 2 suits
+X 45 EEEEE WWWWW 2026/A ; 2026 in any suit
+
+section: Singles and Pairs
+C 50 FF 11/A 22/A 33/B 44/B 55/C 66/C ; Any 3 suits
+C 50 NN EE WW SS RR GG 00
+C 50 aa/A bb/A cc/A aa/B bb/B cc/B DD/C ; Any 3 numbers in a row in 2 suits, third suit's dragon
