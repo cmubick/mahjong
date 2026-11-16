@@ -16,8 +16,14 @@ class GameViewController: UIViewController {
         guard let view = self.view as? SKView else { return }
         let scene = GameScene(size: view.bounds.size)
         scene.scaleMode = .resizeFill
+        scene.safeInsets = view.safeAreaInsets
         view.presentScene(scene)
         gameScene = scene
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        gameScene?.safeInsets = view.safeAreaInsets
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {

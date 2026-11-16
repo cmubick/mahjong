@@ -5,7 +5,8 @@ Things to do after the current work, roughly in the order they were raised.
 ## Before release
 
 - **License the National Mah Jongg League cards.** Every year's card belongs to the League. The plan is past cards free and the current card paid, and both need a licence before they ship. Once licensed, each card is a text file in `mahjong/Cards/` in the same format as `practice.txt`.
-- **The table.** `GameScene.swift` is a placeholder. Needs: tiles drawn in code (Craks characters and the flowers need the most care), the rack, exposures, the discard pile, the Charleston and courtesy screens, calling a discard, joker swaps, and the card itself on screen with how close you are to each hand.
+- **Table polish.** The table plays a whole match, but: there is no deal animation, the tile you just drew is not marked, iPad on its side uses the phone layout in a centered column, and VoiceOver cannot see the tiles (SpriteKit).
+- **Calling prompts.** With a joker in your rack you can call almost any discard, so the game asks you often. Consider a setting to only ask when the call helps your closest hands, or a short timer.
 - **Start menu, how to play, practice hand, history, saved games, store and tip jar**, as in Sevens.
 - **Sounds and haptics.** Same system as Sevens, with tile sounds: a clack for a discard, tiles knocking for a call, a slide for the rack.
 - **App icon** drawn by a script, like `AppStore/icon/make_icon.swift` in Sevens.
