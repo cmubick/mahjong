@@ -239,6 +239,11 @@ final class GameScene: SKScene {
                 return
             case "store":
                 overlay = .store
+            case "shot":
+                // App Store screenshots: `-scenario shot table|claim|card|detail|magnify|charleston`.
+                let kind = arguments.indices.contains(index + 2) ? arguments[index + 2] : "table"
+                showScreenshot(kind)
+                return
             case "magnify":
                 // The press-and-hold magnifier, held open over a rack tile.
                 overlay = nil
@@ -366,7 +371,10 @@ final class GameScene: SKScene {
     }
 
     /// Bots wait while a panel is open or the tiles are being dealt.
-    private var botsWait: Bool { overlay != nil || isDealing }
+    private var botsWait: Bool { overlay != nil || isDealing || frozen }
+
+    /// Debug: holds the table still for App Store screenshots.
+    private var frozen = false
 
     /// Picks up whatever waited while a panel was open.
     private func resumeIfStalled() {
@@ -2595,6 +2603,94 @@ final class GameScene: SKScene {
     // MARK: - Debug
 
     #if DEBUG
+    /// Plays seeded bot hands until `stop` says the position is a good picture.
+    private func screenshotRound(_ stop: (Round) -> Bool) -> Round? {
+        for seed in UInt64(1)...200 {
+            var generator = SeededGenerator(seed: seed)
+            var round = Round.deal(card: .practice, dealer: 0, charleston: true, using: &generator)
+            var moves = 0
+            while round.outcome == nil && moves < 600 {
+                if stop(round) { return round }
+                guard let actor = round.actors.first, let move = Bot.chooseMove(in: round, for: actor) else { break }
+                try? round.apply(move, by: actor)
+                moves += 1
+            }
+        }
+        return nil
+    }
+
+    /// A still position for an App Store screenshot, on the practice card.
+    private func showScreenshot(_ kind: String) {
+        frozen = true
+        overlay = nil
+        // A scorepad with a few hands on it where you are ahead, so the scores look lived in.
+        for seed in UInt64(3)...40 {
+            var generator = SeededGenerator(seed: seed)
+            var pad = Scorepad()
+            for _ in 0..<5 {
+                var hand = pad.deal(card: .practice, charleston: false, using: &generator)
+                while hand.outcome == nil, let actor = hand.actors.first, let move = Bot.chooseMove(in: hand, for: actor) {
+                    try? hand.apply(move, by: actor)
+                }
+                pad.record(hand)
+            }
+            scorepad = pad
+            if pad.scores[0] > 0 { break }
+        }
+        relayout()
+
+        let found: Round?
+        switch kind {
+        case "charleston":
+            found = screenshotRound { if case .charleston(.firstRight) = $0.phase { return true }; return false }
+        case "claim":
+            found = screenshotRound { round in
+                guard case .claim = round.phase, !round.isWaitingForDraw, round.actors.contains(0),
+                      round.discards.count >= 12 else { return false }
+                return round.legalMoves(for: 0).contains { if case .call = $0 { return true }; return false }
+            }
+        default:
+            found = screenshotRound { round in
+                guard case .discard(0) = round.phase, round.drawn != nil, round.discards.count >= 16 else { return false }
+                return round.exposures.reduce(0) { $0 + $1.count } >= 3 && !round.exposures[0].isEmpty
+            }
+        }
+        guard let found else { return }
+        round = found
+        roundRecorded = false
+        switch kind {
+        case "charleston":
+            eventText = "Hand 6. You are East and deal."
+            selection = [3, 7, 11]
+        case "claim":
+            let discard = found.discards.last!
+            eventText = "\(names[discard.player]) discarded \(discard.tile)"
+        default:
+            eventText = "Left discarded \(found.discards.last!.tile). You drew \(found.drawn!)."
+        }
+        sync(animated: false)
+        refreshHUD()
+        if kind == "claim" {
+            advance()
+            // Hold the call window's bar partway down.
+            claimBar?.removeAllActions()
+            claimBar?.xScale = 0.6
+        }
+        switch kind {
+        case "card": show(.card(page: 0))
+        case "detail":
+            if let best = cardRows(for: found).first {
+                detailReturn = .card(page: 0)
+                show(.handDetail(cardID: found.card.id, hand: best.hand))
+            }
+        case "magnify":
+            if let node = tileNodes.first(where: { $0.area == .rack && $0.rackIndex == 4 }) {
+                showMagnifier(for: node.tile, at: node.position)
+            }
+        default: break
+        }
+    }
+
     /// Every tile, large, for checking the artwork. Launch with `-scenario tiles`.
     private func showAllTiles() {
         let m = metrics

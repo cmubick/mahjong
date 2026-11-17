@@ -49,8 +49,23 @@ Purchases in TestFlight are free test purchases. They won't charge anyone.
 
 ## Before external testing or release
 
-- [ ] Ask the League about the card, and have an intellectual-property lawyer review the plan.
-- [ ] Support and privacy policy pages (see `listing.md`).
-- [ ] Screenshots: iPhone 6.9" (1290 × 2796 or 1320 × 2868) and 13" iPad (2064 × 2752), after the iPad layout is done.
+- [ ] Decide whether the 2026 card file stays in the public GitHub repository.
+- [x] Support and privacy policy pages, in `docs/` (live once pushed to GitHub Pages).
+- [x] Screenshots, in `AppStore/screenshots/`.
 - [ ] Paid Apps agreement, banking and tax in App Store Connect.
-- [ ] Age rating, App Privacy and the review notes from `listing.md`.
+
+## 6. Submit for review (You)
+
+In App Store Connect, open the app → **iOS App 1.0**:
+
+1. **Screenshots:** drag `iphone-6.9/*.png` into the 6.9" iPhone slot and `ipad-13/*.png` into the 13" iPad slot, in the order listed in `listing.md`.
+2. **Promotional text, description, keywords, support URL, marketing URL:** paste from `listing.md`.
+3. **Build:** pick the latest TestFlight build.
+4. **App Review information:** a contact name, phone and email; no sign-in is needed. Paste the review notes from `listing.md`.
+5. **App information** (left side): subtitle, category (Games → Board, secondary Card), privacy policy URL, age rating questionnaire (all "None"/"No").
+6. **App Privacy:** "Data Not Collected".
+7. **Pricing and availability:** Free, all territories (or as you like).
+8. **In-app purchases:** for each of the six products, add the review screenshot `iap-review-store.png` and a review note ("Opened from Unlock full game on the start menu"). Then, on the version page under **In-App Purchases and Subscriptions**, select the products so they are reviewed with this version.
+9. **Add for Review**, then **Submit to App Review**.
+
+First reviews usually take a day or two. If Apple asks about the rights to the 2026 card (guideline 5.2), answer from what the League or your lawyer told you.

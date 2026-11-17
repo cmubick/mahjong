@@ -100,7 +100,7 @@ struct CardTests {
     }
 
     @Test func the2026CardReads() throws {
-        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let card = try #require(CardLibrary.card(id: "y2026"))
         #expect(card.year == 2026)
         #expect(!card.isPractice)
         #expect(card.hands.count == 72)
@@ -120,7 +120,7 @@ struct CardTests {
     }
 
     @Test func alternativesAreAllPlayable() throws {
-        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let card = try #require(CardLibrary.card(id: "y2026"))
         // "Kong 2 or 6": both kongs make the hand.
         let hand = try #require(card.hands.first { $0.text.hasPrefix("2026/A DDD/A 2222/B") })
         #expect(hand.variants.count == 2)
@@ -134,7 +134,7 @@ struct CardTests {
     }
 
     @Test func runWithThreeDragonsKongMatchesTheRun() throws {
-        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let card = try #require(CardLibrary.card(id: "y2026"))
         let hand = try #require(card.hands.first { $0.text == "abcd/A DDD/B DDD/C DDDD/A" })
         let ways = card.instances.filter { $0.hand == hand.id }
         // Three suits for the run, times six runs (1234 to 6789).
@@ -155,7 +155,7 @@ struct CardTests {
     }
 
     @Test func twoQuintsInOneSuitWithAnotherSuitsDragon() throws {
-        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let card = try #require(CardLibrary.card(id: "y2026"))
         let hand = try #require(card.hands.first { $0.text.hasPrefix("aaaaa/A bbbbb/A DDDD/B") })
         let ways = card.instances.filter { $0.hand == hand.id }
         var pairs = Set<[Int]>()
@@ -182,7 +182,7 @@ struct CardTests {
     }
 
     @Test func sixFlowersAreOneGroupAndCanBeCalled() throws {
-        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let card = try #require(CardLibrary.card(id: "y2026"))
         let hand = try #require(card.hands.first { $0.text == "aaaa/A FFFFFF aaaa/B" })
         #expect(hand.groups.contains { $0.face == .flower && $0.count == 6 })
         #expect(card.allowsExposures([Exposure(tile: .flower, count: 6, jokers: 2)]))

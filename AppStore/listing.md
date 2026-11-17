@@ -23,7 +23,8 @@ Items marked **TODO** need a decision or a detail from you.
 > • The full Charleston: right, across, left, an optional second Charleston, and the courtesy pass.
 > • Every discard waits in the middle for a moment, so you never miss a call.
 > • Jokers stand in for any tile in a group of three or more, and you can take them back from exposures.
-> • The Card button shows every hand on the card, closest first, with the tiles you still need dimmed.
+> • The Card button shows every hand on the card, closest first, with the tiles you still need dimmed. Tap a hand to see it large.
+> • Press and hold any tile to see it up close, with its name.
 > • The tile you just drew glows gold.
 >
 > FREE TO PLAY
@@ -82,8 +83,8 @@ Words already in the app name are left out on purpose: Apple searches the name t
 
 ## URLs
 
-- **Support URL:** **TODO**, e.g. `https://cmubick.github.io/mahjong/`, set up like the Sevens page
-- **Privacy Policy URL:** **TODO**, e.g. `https://cmubick.github.io/mahjong/privacy.html`
+- **Support URL:** `https://cmubick.github.io/mahjong/` (the pages are in `docs/`; live once pushed)
+- **Privacy Policy URL:** `https://cmubick.github.io/mahjong/privacy.html`
 - **Marketing URL:** optional, can be left blank
 
 ## Copyright
@@ -122,4 +123,23 @@ The project already declares that the app uses no non-exempt encryption, so App 
 
 ## Screenshots
 
-Captured in `AppStore/screenshots/` once the layout is final (see `checklist.md`).
+Captured in `AppStore/screenshots/`, all on the free practice card (the League's hands are kept out of marketing images):
+
+- `iphone-6.9/` at 1290 × 2796, for the 6.9-inch iPhone slot. App Store Connect scales these down for smaller iPhones.
+- `ipad-13/` at 2048 × 2732, for the 13-inch iPad slot.
+- `iap-review-store.png`: the store screen, to attach as the review screenshot for every in-app purchase.
+
+Suggested order (the first three show up in search results):
+
+1. `01-table`: a hand in progress, with the tile you just drew in gold.
+2. `05-claim`: a discard waiting to be called, with Pung, Kong and Pass.
+3. `02-card`: the card, closest hands first, tiles you still need dimmed.
+4. `04-magnify`: holding a tile to see its name.
+5. `03-detail`: one hand, large.
+6. `06-charleston`: choosing tiles to pass.
+7. `07-tiles`: How to play, every tile.
+8. `08-menu`: the start menu.
+
+The iPad set has the same names, without `06-charleston`.
+
+To retake them, launch the debug build with `-scenario shot table` (or `card`, `detail`, `magnify`, `claim`, `charleston`), wait about 30 seconds for it to find a good position, then save a screenshot with `xcrun simctl io <device> screenshot <file>`.

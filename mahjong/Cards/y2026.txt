@@ -1,11 +1,10 @@
-# The 2026 National Mah Jongg League card, entered in this game's card format
-# (see practice.txt for how the format works). Players need their own official
-# card from the League.
+# Hands for 2026, in this game's card format (see practice.txt for how the
+# format works). Players need their own official card.
 #
 # Colours on the printed card become suit letters here: the first colour is /A,
 # the second /B, the third /C. A hand with choices lists each one after a "|".
 
-id: nmjl2026
+id: y2026
 title: 2026 Card
 year: 2026
 

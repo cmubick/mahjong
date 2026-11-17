@@ -4,7 +4,7 @@ Things to do after the current work, roughly in the order they were raised.
 
 ## Before release
 
-- **The League's cards.** The 2026 card is in `mahjong/Cards/nmjl2026.txt`, entered from a bought card in this app's own format, like other independent apps do. The app tells players to own an official card and links to the League's site. Each new year is one more file without the `kind: practice` line: the newest year is the one for sale and older years become free.
+- **The League's cards.** The 2026 card is in `mahjong/Cards/y2026.txt`, entered from a bought card in this app's own format, like other independent apps do. The app tells players to own an official card and links to the League's site. Each new year is one more file without the `kind: practice` line: the newest year is the one for sale and older years become free.
 - **Table polish.** iPad on its side uses the phone layout in a centered column, and VoiceOver cannot see the tiles (SpriteKit).
 - **Calling prompts.** With a joker in your rack you can call almost any discard, so the Pung/Kong buttons come up often. Each discard now has a timed window (Time to call, 2, 3 or 5 seconds) and runs out on its own, but a setting to only offer calls that help your closest hands might still be welcome.
 - **Practice hand**, as in Sevens: a scripted first hand that teaches the Charleston, calling and Mahjong.
