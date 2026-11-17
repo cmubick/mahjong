@@ -125,7 +125,8 @@ The project already declares that the app uses no non-exempt encryption, so App 
 
 Captured in `AppStore/screenshots/`, all on the free practice card (the League's hands are kept out of marketing images):
 
-- `iphone-6.9/` at 1290 × 2796, for the 6.9-inch iPhone slot. App Store Connect scales these down for smaller iPhones.
+- `iphone-6.1/` at 1179 × 2556, for the "iPhone with Dynamic Island (medium display)" slot, the one App Store Connect asks for by default.
+- `iphone-6.9/` at 1290 × 2796, for the larger 6.9-inch iPhone slot, if you add it under "View All Sizes in Media Manager".
 - `ipad-13/` at 2048 × 2732, for the 13-inch iPad slot.
 - `iap-review-store.png`: the store screen, to attach as the review screenshot for every in-app purchase.
 

@@ -58,7 +58,7 @@ Purchases in TestFlight are free test purchases. They won't charge anyone.
 
 In App Store Connect, open the app → **iOS App 1.0**:
 
-1. **Screenshots:** drag `iphone-6.9/*.png` into the 6.9" iPhone slot and `ipad-13/*.png` into the 13" iPad slot, in the order listed in `listing.md`.
+1. **Screenshots:** drag `iphone-6.1/*.png` into the iPhone slot App Store Connect shows (6.1"), optionally `iphone-6.9/*.png` into the 6.9" slot, and `ipad-13/*.png` into the 13" iPad slot, in the order listed in `listing.md`.
 2. **Promotional text, description, keywords, support URL, marketing URL:** paste from `listing.md`.
 3. **Build:** pick the latest TestFlight build.
 4. **App Review information:** a contact name, phone and email; no sign-in is needed. Paste the review notes from `listing.md`.
