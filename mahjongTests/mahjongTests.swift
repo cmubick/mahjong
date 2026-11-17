@@ -4,6 +4,8 @@
 //
 
 import Foundation
+import StoreKit
+import StoreKitTest
 import Testing
 @testable import mahjong
 
@@ -95,6 +97,95 @@ struct CardTests {
             let needed = instance.tilesNeeded(concealed: TileCounts(tiles(of: instance)), exposures: [])
             #expect(needed == 0)
         }
+    }
+
+    @Test func the2026CardReads() throws {
+        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        #expect(card.year == 2026)
+        #expect(!card.isPractice)
+        #expect(card.hands.count == 72)
+        #expect(card.sections == ["2026", "2468", "Any Like Numbers", "Quints", "Consecutive Run",
+                                  "13579", "Winds and Dragons", "369", "Singles and Pairs"])
+        for hand in card.hands {
+            #expect(hand.variants.allSatisfy { $0.reduce(0) { $0 + $1.count } == 14 })
+            #expect(card.instances.contains { $0.hand == hand.id }, "no way to make \(hand.text)")
+        }
+        for instance in card.instances {
+            let needed = instance.tilesNeeded(concealed: TileCounts(tiles(of: instance)), exposures: [])
+            #expect(needed == 0)
+        }
+        // The newest League card is the one for sale.
+        #expect(CardLibrary.currentYear == 2026)
+        #expect(CardLibrary.isPaid(card))
+    }
+
+    @Test func alternativesAreAllPlayable() throws {
+        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        // "Kong 2 or 6": both kongs make the hand.
+        let hand = try #require(card.hands.first { $0.text.hasPrefix("2026/A DDD/A 2222/B") })
+        #expect(hand.variants.count == 2)
+        let kongs = Set(card.instances.filter { $0.hand == hand.id }.flatMap { instance in
+            instance.groups.filter { $0.count == 4 }.compactMap { group -> Int? in
+                if case .number(_, let rank) = group.tile { return rank }
+                return nil
+            }
+        })
+        #expect(kongs == [2, 6])
+    }
+
+    @Test func runWithThreeDragonsKongMatchesTheRun() throws {
+        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let hand = try #require(card.hands.first { $0.text == "abcd/A DDD/B DDD/C DDDD/A" })
+        let ways = card.instances.filter { $0.hand == hand.id }
+        // Three suits for the run, times six runs (1234 to 6789).
+        #expect(ways.count == 3 * 6)
+        for way in ways {
+            let numbers = way.groups.compactMap { group -> Suit? in
+                if case .number(let suit, _) = group.tile { return suit }
+                return nil
+            }
+            let suit = try #require(numbers.first)
+            #expect(numbers.allSatisfy { $0 == suit })
+            // The kong is the run's own dragon; the other two dragons are pungs.
+            #expect(way.groups.contains { $0.tile == .dragon(suit.dragon) && $0.count == 4 })
+            for other in Suit.allCases where other != suit {
+                #expect(way.groups.contains { $0.tile == .dragon(other.dragon) && $0.count == 3 })
+            }
+        }
+    }
+
+    @Test func twoQuintsInOneSuitWithAnotherSuitsDragon() throws {
+        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let hand = try #require(card.hands.first { $0.text.hasPrefix("aaaaa/A bbbbb/A DDDD/B") })
+        let ways = card.instances.filter { $0.hand == hand.id }
+        var pairs = Set<[Int]>()
+        for way in ways {
+            let quints = way.groups.filter { $0.count == 5 }
+            let suits = Set(quints.compactMap { group -> Suit? in
+                if case .number(let suit, _) = group.tile { return suit }
+                return nil
+            })
+            #expect(suits.count == 1)
+            let suit = try #require(suits.first)
+            let ranks = quints.compactMap { group -> Int? in
+                if case .number(_, let rank) = group.tile { return rank }
+                return nil
+            }.sorted()
+            #expect(ranks.count == 2 && ranks[0] != ranks[1])
+            pairs.insert(ranks)
+            let dragon = try #require(way.groups.first { $0.count == 4 })
+            #expect(dragon.tile != .dragon(suit.dragon))
+            #expect(Suit.allCases.contains { $0 != suit && dragon.tile == .dragon($0.dragon) })
+        }
+        // Any two different numbers: every pair from 1 to 9.
+        #expect(pairs.count == 36)
+    }
+
+    @Test func sixFlowersAreOneGroupAndCanBeCalled() throws {
+        let card = try #require(CardLibrary.card(id: "nmjl2026"))
+        let hand = try #require(card.hands.first { $0.text == "aaaa/A FFFFFF aaaa/B" })
+        #expect(hand.groups.contains { $0.face == .flower && $0.count == 6 })
+        #expect(card.allowsExposures([Exposure(tile: .flower, count: 6, jokers: 2)]))
     }
 
     @Test func yearUsesSoapAsZero() {
@@ -304,17 +395,39 @@ struct RoundTests {
     @Test func calledDiscardIsExposedAndCallerDiscards() throws {
         var round = waitingRound()
         try round.apply(.discard(.wind(.east)), by: 0)
-        // Nobody can use the East, so player 1 draws.
+        // Nobody can use the East, but it stays callable until player 1 draws.
+        #expect(round.phase == .claim(Round.Discard(tile: .wind(.east), player: 0)))
+        #expect(round.isWaitingForDraw)
+        #expect(round.actors == [1])
+        #expect(round.legalMoves(for: 1) == [.draw])
+        #expect(!round.isLegal(.draw, by: 2))
+        try round.apply(.draw, by: 1)
         #expect(round.phase == .discard(1))
         #expect(round.drawn == n(.craks, 9))
         try round.apply(.discard(.joker), by: 1)
         // A discarded joker can never be called.
+        #expect(round.legalMoves(for: 2) == [.draw])
+        try round.apply(.draw, by: 2)
         #expect(round.phase == .discard(2))
         #expect(round.drawn == n(.craks, 8))
         try round.apply(.discard(.wind(.west)), by: 2)
+        try round.apply(.draw, by: 3)
         // The wall is empty, so nobody wins.
         #expect(round.phase == .over(.wallGame))
         #expect(round.payments() == [0, 0, 0, 0])
+    }
+
+    @Test func theDrawWaitsForEveryoneWhoCanCall() throws {
+        var round = waitingRound()
+        try round.apply(.discard(n(.dots, 4)), by: 0)
+        // Player 1 could win on it, so nobody may draw until they answer.
+        #expect(round.actors == [1])
+        #expect(!round.isWaitingForDraw)
+        try round.apply(.decline, by: 1)
+        #expect(round.isWaitingForDraw)
+        #expect(round.legalMoves(for: 1) == [.draw])
+        try round.apply(.draw, by: 1)
+        #expect(round.phase == .discard(1))
     }
 
     @Test func callingMakesAnExposure() throws {
@@ -367,21 +480,38 @@ struct RoundTests {
     }
 }
 
-struct MatchTests {
+struct ScorepadTests {
 
-    @Test func shortMatchRotatesTheDeal() throws {
+    @Test func theDealMovesOnAndScoresAddUp() throws {
         var generator = SeededGenerator(seed: 5)
-        var match = Match(settings: MatchSettings(length: .short), card: .practice)
+        var pad = Scorepad()
         var dealers: [Int] = []
-        while !match.isOver {
-            var round = match.dealRound(using: &generator)
+        for _ in 0..<5 {
+            var round = pad.deal(card: .practice, charleston: true, using: &generator)
             dealers.append(round.dealer)
             try playOut(&round)
-            match.record(round)
+            pad.record(round)
         }
-        #expect(dealers == [0, 1, 2, 3])
-        #expect(match.scores.reduce(0, +) == 0)
-        #expect(!match.winners.isEmpty)
+        #expect(dealers == [0, 1, 2, 3, 0])
+        #expect(pad.handsPlayed == 5)
+        #expect(pad.scores.reduce(0, +) == 0)
+    }
+
+    @Test func clearingStartsAFreshSheetButKeepsTheDeal() throws {
+        var generator = SeededGenerator(seed: 6)
+        var pad = Scorepad()
+        for _ in 0..<3 {
+            var round = pad.deal(card: .practice, charleston: false, using: &generator)
+            try playOut(&round)
+            pad.record(round)
+        }
+        let later = Date().addingTimeInterval(60)
+        pad.clear(at: later)
+        #expect(pad.scores == [0, 0, 0, 0])
+        #expect(pad.wins == [0, 0, 0, 0])
+        #expect(pad.handsPlayed == 0)
+        #expect(pad.started == later)
+        #expect(pad.dealer == 3)
     }
 
     /// Not a rule, but a sign the bots are any good: over many hands somebody
@@ -395,5 +525,288 @@ struct MatchTests {
             if case .over(.mahjong) = round.phase { wins += 1 }
         }
         #expect(wins >= 8, "only \(wins) of 20 hands had a winner")
+    }
+}
+
+struct SavedGameTests {
+
+    /// Plays a seeded bot game for a while so there is a realistic position to save.
+    private func midGame(moves: Int = 60) throws -> (Scorepad, Round) {
+        var generator = SeededGenerator(seed: 42)
+        let match = Scorepad()
+        var round = match.deal(card: .practice, charleston: true, using: &generator)
+        for _ in 0..<moves {
+            guard round.outcome == nil else { break }
+            let actor = try #require(round.actors.first)
+            try round.apply(try #require(Bot.chooseMove(in: round, for: actor)), by: actor)
+        }
+        return (match, round)
+    }
+
+    @Test func aHandInProgressSurvivesSavingAndLoading() throws {
+        let (match, round) = try midGame()
+        let data = try JSONEncoder().encode(SavedGame(scorepad: match, round: round))
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data)
+        let restored = try #require(loaded.round)
+
+        #expect(restored.hands == round.hands)
+        #expect(restored.exposures == round.exposures)
+        #expect(restored.discards == round.discards)
+        #expect(restored.wall == round.wall)
+        #expect(restored.phase == round.phase)
+        #expect(restored.drawn == round.drawn)
+        #expect(restored.card.hands.map(\.text) == round.card.hands.map(\.text))
+        for player in 0..<4 {
+            #expect(Set(restored.legalMoves(for: player)) == Set(round.legalMoves(for: player)))
+        }
+        #expect(loaded.scorepad.scores == match.scores)
+        #expect(loaded.scorepad.dealer == match.dealer)
+    }
+
+    @Test func aRestoredHandCanBePlayedToTheEnd() throws {
+        let (_, round) = try midGame()
+        var restored = try JSONDecoder().decode(Round.self, from: JSONEncoder().encode(round))
+        try playOut(&restored)
+        #expect(restored.outcome != nil)
+    }
+
+    @Test func savingBetweenHandsKeepsNoHand() throws {
+        let (match, _) = try midGame()
+        let data = try JSONEncoder().encode(SavedGame(scorepad: match, round: nil))
+        #expect(try JSONDecoder().decode(SavedGame.self, from: data).round == nil)
+    }
+
+    @Test func saverWritesLoadsAndClearsAFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mahjong-tests-\(UUID().uuidString)")
+            .appendingPathComponent("savedGame.json")
+        #expect(GameSaver.load(from: url) == nil)
+        let (match, round) = try midGame()
+        GameSaver.save(SavedGame(scorepad: match, round: round), to: url)
+        #expect(GameSaver.load(from: url)?.round?.hands == round.hands)
+        GameSaver.clear(at: url)
+        #expect(GameSaver.load(from: url) == nil)
+    }
+}
+
+struct SoundTests {
+
+    @Test(arguments: Sound.allCases)
+    func everySoundIsAValidShortWavFile(sound: Sound) {
+        let data = SoundSynth.wav(for: sound)
+        #expect(String(decoding: data.prefix(4), as: UTF8.self) == "RIFF")
+        #expect(String(decoding: data[8..<12], as: UTF8.self) == "WAVE")
+        let samples = SoundSynth.samples(for: sound)
+        #expect(data.count == 44 + samples.count * 2)
+        // Audible, never clipping, and short enough to stay out of the way.
+        #expect(samples.contains { abs($0) > 0.05 })
+        #expect(samples.allSatisfy { abs($0) <= 1 })
+        #expect(Double(samples.count) / SoundSynth.sampleRate < 1.5)
+    }
+}
+
+struct StoreOfferTests {
+
+    private let year = 2026
+
+    @Test func withNothingOwnedTheFullGameComesFirstThenTheCardAlone() {
+        #expect(StoreOffers.offers(owned: [], currentYear: year) == ["mahjong.fullgame.2026", "mahjong.card.2026"])
+    }
+
+    @Test func owningThisYearsCardOffersTheUpgrade() {
+        let owned: Set<String> = ["mahjong.card.2026"]
+        #expect(StoreOffers.ownsCard(year, owned: owned))
+        #expect(!StoreOffers.hasFullGame(owned: owned))
+        #expect(StoreOffers.offers(owned: owned, currentYear: year) == ["mahjong.upgrade"])
+    }
+
+    @Test func theFullGameGivesThisYearsCardAndHistory() {
+        let owned: Set<String> = ["mahjong.fullgame.2026"]
+        #expect(StoreOffers.ownsCard(year, owned: owned))
+        #expect(StoreOffers.hasFullGame(owned: owned))
+        #expect(StoreOffers.offers(owned: owned, currentYear: year).isEmpty)
+    }
+
+    @Test func nextYearsCardIsStillForSale() {
+        // Bought the full game in 2026; the 2027 card arrives.
+        let owned: Set<String> = ["mahjong.fullgame.2026"]
+        #expect(!StoreOffers.ownsCard(2027, owned: owned))
+        #expect(StoreOffers.hasFullGame(owned: owned))
+        #expect(StoreOffers.offers(owned: owned, currentYear: 2027) == ["mahjong.card.2027"])
+        // Bought the card alone in 2026 and the upgrade: only the new card is left to buy.
+        #expect(StoreOffers.offers(owned: ["mahjong.card.2026", "mahjong.upgrade"], currentYear: 2027) == ["mahjong.card.2027"])
+        // Bought only the 2026 card: next year it's the full game again, or the card alone.
+        #expect(StoreOffers.offers(owned: ["mahjong.card.2026"], currentYear: 2027)
+                == ["mahjong.fullgame.2027", "mahjong.card.2027"])
+    }
+
+    @Test func withNoCardForSaleTheFullGameIsJustTheExtras() {
+        #expect(StoreOffers.offers(owned: [], currentYear: nil) == ["mahjong.upgrade"])
+        #expect(StoreOffers.offers(owned: ["mahjong.upgrade"], currentYear: nil).isEmpty)
+        #expect(!StoreOffers.productIDs(currentYear: nil).contains { $0.hasPrefix("mahjong.card.") })
+    }
+}
+
+/// Runs the store against the local test configuration in Mahjong.storekit.
+@MainActor
+@Suite(.serialized)
+struct StoreTests {
+
+    private func makeSession() throws -> SKTestSession {
+        let session = try SKTestSession(configurationFileNamed: "Mahjong")
+        session.disableDialogs = true
+        session.clearTransactions()
+        return session
+    }
+
+    private func makeStore(defaults: UserDefaults? = nil) -> Store {
+        Store(currentYear: 2026, defaults: defaults ?? UserDefaults(suiteName: "store-tests-\(UUID().uuidString)")!)
+    }
+
+    @Test func loadsTheProductsAndThreeTips() async throws {
+        _ = try makeSession()
+        let store = makeStore()
+        await store.refresh()
+        #expect(store.hasLoaded)
+        #expect(store.offers.map(\.id) == ["mahjong.fullgame.2026", "mahjong.card.2026"])
+        #expect(store.offers.allSatisfy { $0.product != nil })
+        #expect(store.tips.map(\.id) == StoreOffers.tipIDs)
+        #expect(!store.hasFullGame)
+    }
+
+    @Test func buyingTheCardThenTheUpgradeGivesEverything() async throws {
+        _ = try makeSession()
+        let defaults = UserDefaults(suiteName: "store-tests-\(UUID().uuidString)")!
+        let store = makeStore(defaults: defaults)
+        await store.refresh()
+        #expect(await store.buy(try #require(store.products["mahjong.card.2026"])) == .success)
+        #expect(store.ownsCard(2026))
+        #expect(store.offers.map(\.id) == ["mahjong.upgrade"])
+        #expect(await store.buy(try #require(store.products["mahjong.upgrade"])) == .success)
+        #expect(store.ownsEverything)
+
+        // A fresh launch reads the cached answer, then the store confirms it.
+        let relaunched = makeStore(defaults: defaults)
+        #expect(relaunched.ownsEverything)
+        await relaunched.refresh()
+        #expect(relaunched.ownsEverything)
+    }
+
+    @Test func tippingDoesNotUnlockAnything() async throws {
+        _ = try makeSession()
+        let store = makeStore()
+        await store.refresh()
+        let tip = try #require(store.tips.first)
+        #expect(await store.buy(tip) == .success)
+        #expect(!store.hasFullGame)
+        #expect(await store.buy(tip) == .success)
+    }
+
+    @Test func restoreFindsAnEarlierPurchase() async throws {
+        _ = try makeSession()
+        let first = makeStore()
+        await first.refresh()
+        #expect(await first.buy(try #require(first.products["mahjong.fullgame.2026"])) == .success)
+        let store = makeStore()
+        #expect(!store.hasFullGame)
+        #expect(await store.restore())
+        #expect(store.ownsEverything)
+    }
+}
+
+struct CardLibraryTests {
+
+    private func card(_ id: String, year: Int, practice: Bool = false) throws -> Card {
+        try Card(text: """
+            id: \(id)
+            title: \(id)
+            year: \(year)
+            \(practice ? "kind: practice" : "")
+            section: Test
+            X 25 1111/A 222/A 333/A 4444/A
+            """)
+    }
+
+    @Test func theNewestLeagueCardIsPaidAndTheRestAreFree() throws {
+        let cards = CardLibrary.sorted([
+            try card("practice", year: 2026, practice: true),
+            try card("league2024", year: 2024),
+            try card("league2026", year: 2026),
+            try card("league2025", year: 2025),
+        ])
+        #expect(cards.map(\.id) == ["league2026", "league2025", "league2024", "practice"])
+        #expect(CardLibrary.paidCardID(in: cards) == "league2026")
+        #expect(!CardLibrary.isPaid(cards[1], in: cards))
+        #expect(!CardLibrary.isPaid(cards[3], in: cards))
+        #expect(CardLibrary.defaultCard(unlocked: true, in: cards).id == "league2026")
+        #expect(CardLibrary.defaultCard(unlocked: false, in: cards).id == "league2025")
+    }
+
+    @Test func thePracticeCardIsNeverPaid() throws {
+        let cards = [try card("practice", year: 2026, practice: true)]
+        #expect(CardLibrary.paidCardID(in: cards) == nil)
+        #expect(CardLibrary.defaultCard(unlocked: false, in: cards).id == "practice")
+        #expect(Card.practice.isPractice)
+    }
+
+    @Test func theAppShipsThePracticeCard() {
+        #expect(CardLibrary.all.contains { $0.id == "practice" })
+    }
+}
+
+struct HistoryTests {
+
+    private func finishedRounds(_ count: Int, seed: UInt64 = 9) throws -> [Round] {
+        var generator = SeededGenerator(seed: seed)
+        var pad = Scorepad()
+        var rounds: [Round] = []
+        for _ in 0..<count {
+            var round = pad.deal(card: .practice, charleston: true, using: &generator)
+            try playOut(&round)
+            pad.record(round)
+            rounds.append(round)
+        }
+        return rounds
+    }
+
+    @Test func aRecordRemembersWhoWonAndWhatYouPaid() throws {
+        for round in try finishedRounds(6) {
+            let record = HandRecord(round: round)
+            #expect(record.payments == round.payments())
+            #expect(record.cardTitle == "Practice Card")
+            if case .over(.mahjong(let win)) = round.phase {
+                #expect(record.winner == win.winner)
+                #expect(record.value == round.card.hands[win.hand].value)
+            } else {
+                #expect(record.winner == nil)
+            }
+        }
+    }
+
+    @Test func theSummaryAddsUpYourHands() throws {
+        let rounds = try finishedRounds(12)
+        var history = HandHistory()
+        for round in rounds { history.add(HandRecord(round: round)) }
+        let summary = history.summary
+        #expect(summary.played == 12)
+        #expect(summary.net == rounds.map { $0.payments()[0] }.reduce(0, +))
+        let youWon = rounds.filter { if case .over(.mahjong(let win)) = $0.phase { return win.winner == 0 }; return false }
+        #expect(summary.won == youWon.count)
+        let walls = rounds.filter { $0.phase == .over(.wallGame) }
+        #expect(summary.wallGames == walls.count)
+    }
+
+    @Test func historySurvivesSavingAndIsCapped() throws {
+        let round = try #require(try finishedRounds(1).first)
+        var history = HandHistory()
+        for _ in 0..<(HandHistory.cap + 5) { history.add(HandRecord(round: round)) }
+        #expect(history.hands.count == HandHistory.cap)
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mahjong-tests-\(UUID().uuidString)")
+            .appendingPathComponent("history.json")
+        HistoryStore.save(history, to: url)
+        #expect(HistoryStore.load(from: url).hands.count == HandHistory.cap)
+        try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
     }
 }

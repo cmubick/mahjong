@@ -74,7 +74,8 @@ nonisolated struct Round: Sendable, Codable {
         case courtesyPass
         /// The player must discard, or call Mahjong, or swap tiles for jokers first.
         case discard(Int)
-        /// The other players may call the latest discard.
+        /// The other players may call the latest discard. The window stays open until
+        /// someone calls it or the next player draws.
         case claim(Discard)
         case over(Outcome)
     }
@@ -95,6 +96,9 @@ nonisolated struct Round: Sendable, Codable {
         case mahjong
         /// Let the discard go.
         case decline
+        /// The next player draws from the wall, which closes the call window. Only
+        /// once everyone else has let the discard go.
+        case draw
     }
 
     let card: Card
@@ -182,10 +186,22 @@ nonisolated struct Round: Sendable, Codable {
         case .discard(let player):
             return [player]
         case .claim(let discard):
-            return everyone.filter { $0 != discard.player && answers[$0] == nil }
+            let undecided = everyone.filter { $0 != discard.player && answers[$0] == nil }
+            if undecided.isEmpty && isWaitingForDraw {
+                return [nextPlayer(after: discard.player)]
+            }
+            return undecided
         case .over:
             return []
         }
+    }
+
+    /// Everyone has let the discard go, so it stays callable only until the next
+    /// player draws.
+    var isWaitingForDraw: Bool {
+        guard case .claim(let discard) = phase else { return false }
+        let others = (0..<playerCount).filter { $0 != discard.player }
+        return others.allSatisfy { answers[$0] == .decline }
     }
 
     var outcome: Outcome? {
@@ -215,6 +231,7 @@ nonisolated struct Round: Sendable, Codable {
             moves += Set(hands[player]).sorted().map(Move.discard)
             return moves
         case .claim(let discard):
+            if isWaitingForDraw { return [.draw] }
             var moves: [Move] = []
             if canWin(player, with: discard.tile) {
                 moves.append(.mahjong)
@@ -267,11 +284,12 @@ nonisolated struct Round: Sendable, Codable {
     }
 
     /// The sizes of group the player could expose by calling `tile`. A discard can only
-    /// be called for a pung, kong or quint that still fits a hand on the card.
+    /// be called for a group of three or more that still fits a hand on the card; the
+    /// card decides which sizes exist.
     func callCounts(for player: Int, tile: Tile) -> [Int] {
         guard tile != .joker else { return [] }
         let hand = TileCounts(hands[player])
-        return (3...5).filter { count in
+        return (3...Card.handSize).filter { count in
             guard hand[tile] + hand.jokers >= count - 1 else { return false }
             let exposure = Round.exposure(of: tile, count: count, from: hand)
             return card.allowsExposures(exposures[player] + [exposure])
@@ -360,6 +378,9 @@ nonisolated struct Round: Sendable, Codable {
             answers[player] = move
             declineForPlayersWithNoChoice()
 
+        case (.claim(let discard), .draw):
+            resolveClaims(for: discard)
+
         default:
             throw RuleError.illegalMove
         }
@@ -394,9 +415,10 @@ nonisolated struct Round: Sendable, Codable {
     }
 
     /// Players who can do nothing with a discard let it go straight away, so nobody
-    /// waits on them.
+    /// waits on them. Once everyone has answered, a call or Mahjong takes the tile at
+    /// once; if everyone let it go, it waits for the next player's draw.
     private mutating func declineForPlayersWithNoChoice() {
-        guard case .claim(let discard) = phase else { return }
+        guard case .claim(let discard) = phase, !isWaitingForDraw else { return }
         for player in actors where legalMoves(for: player) == [.decline] {
             answers[player] = .decline
         }

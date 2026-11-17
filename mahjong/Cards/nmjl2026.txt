@@ -1,0 +1,100 @@
+# The 2026 National Mah Jongg League card, entered in this game's card format
+# (see practice.txt for how the format works). Players need their own official
+# card from the League.
+#
+# Colours on the printed card become suit letters here: the first colour is /A,
+# the second /B, the third /C. A hand with choices lists each one after a "|".
+
+id: nmjl2026
+title: 2026 Card
+year: 2026
+
+section: 2026
+X 25 222/A 000 2222/B 6666/B ; Any 2 suits
+X 25 2026/A DDD/A 2222/B DDD/B | 2026/A DDD/A 6666/B DDD/B ; Any 2 suits, matching dragons, kong of 2s or 6s
+X 25 FFF 2026/A 222/B 6666/C ; Any 3 suits
+X 25 22/A 00 222/B 666/B NEWS ; Any 2 suits
+
+section: 2468
+X 25 222/A 444/A 6666/A 8888/A ; Any 1 suit
+X 25 222/A 444/A 6666/B 8888/B ; Any 2 suits
+X 30 FF 2222/A 44/B 66/B 8888/A ; Any 2 suits
+X 30 EE 22/A 444/A 666/A 88/A WW ; Any 1 suit, East and West only
+X 25 2222/A DDD/A 8888/B DDD/B ; Any 2 suits, matching dragons, these numbers only
+X 25 FFF 22/A 44/A 666/A 8888/A ; Any 1 suit
+X 25 2468/A 2222/B D/B 2222/C D/C | 2468/A 4444/B D/B 4444/C D/C | 2468/A 6666/B D/B 6666/C D/C | 2468/A 8888/B D/B 8888/C D/C ; Any 3 suits, like kongs of 2, 4, 6 or 8, matching dragons
+X 30 FFF 2468/A FFF 2222/B | FFF 2468/A FFF 4444/B | FFF 2468/A FFF 6666/B | FFF 2468/A FFF 8888/B ; Any 2 suits, kong of 2, 4, 6 or 8
+C 30 FF 246/A 888/A 246/B 888/B ; Any 2 suits
+
+section: Any Like Numbers
+X 30 aaaa/A FFFFFF aaaa/B ; Any 2 suits
+X 25 aaaa/A D/A aaa/B D/B aaaa/C D/C ; Any 3 suits, matching dragons
+X 25 FF aaaa/A aa/B aaaa/C DD/A | FF aaaa/A aa/B aaaa/C DD/B | FF aaaa/A aa/B aaaa/C DD/C ; Any 3 suits, any dragon
+
+section: Quints
+X 40 aaaaa/A aaaa/B aaaaa/C ; Any 3 suits, any like numbers
+X 45 FF aaaaa/A bb/A ccccc/A ; Any 1 suit, any 3 consecutive numbers
+X 40 aaaaa/A bbbbb/A DDDD/B | aaaaa/A ccccc/A DDDD/B | aaaaa/A ddddd/A DDDD/B | aaaaa/A eeeee/A DDDD/B | aaaaa/A fffff/A DDDD/B | aaaaa/A ggggg/A DDDD/B | aaaaa/A hhhhh/A DDDD/B | aaaaa/A iiiii/A DDDD/B ; Any 2 numbers in 1 suit, another suit's dragon
+
+section: Consecutive Run
+X 25 11/A 222/A 33/A 444/A 5555/A ; Any 1 suit, these numbers only
+X 25 55/A 666/A 77/A 888/A 9999/A ; Any 1 suit, these numbers only
+X 25 FFF aaaa/A bcd/A eeee/A ; Any 1 suit, any 5 consecutive numbers
+X 25 FFF aaaa/A bcd/B eeee/A ; Any 2 suits, any 5 consecutive numbers
+X 25 aa/A bb/A aaa/B bbb/B cccc/C ; Any 3 suits, any 3 consecutive numbers
+X 25 aaa/A bbb/A cccc/A dddd/A ; Any 1 suit, any 4 consecutive numbers
+X 25 aaa/A bbb/A cccc/B dddd/B ; Any 2 suits, any 4 consecutive numbers
+X 25 FFF aa/A bb/A ccc/A DDDD/A ; Any 1 suit, any run, matching dragons
+X 25 FFF aa/A bb/B ccc/A DDDD/B ; Any 2 suits, any run, dragons match the middle number
+X 30 aaaa/A FFFFFF bbbb/A ; Any 1 suit, any 2 consecutive numbers
+X 25 FF aaaa/A bbbb/A cccc/A ; Any 1 suit, any 3 consecutive numbers
+X 25 FF aaaa/A bbbb/B cccc/C ; Any 3 suits, any 3 consecutive numbers
+C 35 abbccc/A abbccc/B dd/C ; Any 3 suits, any 4 consecutive numbers
+
+section: 13579
+X 25 11/A 333/A 55/A 777/A 9999/A ; Any 1 suit
+X 25 11/A 333/A 55/B 777/B 9999/C ; Any 3 suits
+X 25 111/A 333/A 3333/B 5555/B ; Any 2 suits
+X 25 555/A 777/A 7777/B 9999/B ; Any 2 suits
+X 30 NN 1111/A 33/A 5555/A SS ; Any 1 suit, North and South only
+X 30 NN 5555/A 77/A 9999/A SS ; Any 1 suit, North and South only
+X 25 113579/A 1111/B 1111/C | 133579/A 3333/B 3333/C | 135579/A 5555/B 5555/C | 135779/A 7777/B 7777/C | 135799/A 9999/B 9999/C ; Any 3 suits, pair any odd number, kongs match the pair
+X 25 FFF 11/A 33/A 555/A DDDD/A ; Any 1 suit, matching dragons
+X 25 FFF 55/A 77/A 999/A DDDD/A ; Any 1 suit, matching dragons
+X 25 11/A 33/A 111/B 333/B 5555/C ; Any 3 suits
+X 25 55/A 77/A 555/B 777/B 9999/C ; Any 3 suits
+X 30 1111/A 33/A 55/A 77/A 9999/A ; Any 1 suit
+X 30 1111/A 33/B 55/B 77/B 9999/A ; Any 2 suits
+C 35 FF 11/A 33/A 55/A 111/B 111/C ; Any 3 suits, these numbers only
+C 35 FF 55/A 77/A 99/A 555/B 555/C ; Any 3 suits, these numbers only
+C 30 FF 135/A 777/A 999/A DDD/B ; Any 1 suit, another suit's dragon
+
+section: Winds and Dragons
+X 25 NNNN EEE WWW SSSS ; Winds only
+X 25 NNN EEEE WWWW SSS ; Winds only
+X 25 abcd/A DDD/B DDD/C DDDD/A ; Any 4 consecutive numbers in 1 suit, all 3 dragons
+X 25 NNN 1111/A 1111/B SSS | NNN 3333/A 3333/B SSS | NNN 5555/A 5555/B SSS | NNN 7777/A 7777/B SSS | NNN 9999/A 9999/B SSS ; Any like odd numbers in 2 suits
+X 25 EEE 2222/A 2222/B WWW | EEE 4444/A 4444/B WWW | EEE 6666/A 6666/B WWW | EEE 8888/A 8888/B WWW ; Any like even numbers in 2 suits
+X 25 FFF NNNN FFF DDDD/A | FFF EEEE FFF DDDD/A | FFF WWWW FFF DDDD/A | FFF SSSS FFF DDDD/A ; Any wind, any dragon
+X 25 1/A N 2/A EE 3/A WWW 4/A SSSS ; Any 1 suit, these numbers only
+X 25 FF NNNN SSSS DD/A DD/B ; Any 2 dragons
+X 25 FF EEEE WWWW DD/A DD/B ; Any 2 dragons
+C 30 NN EEE 2026/A WWW SS ; 2026 in any 1 suit
+
+section: 369
+X 25 333/A 666/A 6666/B 9999/B ; Any 2 suits
+X 25 333/A 666/A 6666/B 9999/C ; Any 3 suits
+X 25 33/A 66/A 333/B 666/B 9999/C ; Any 3 suits
+X 25 FFF 33/A 666/A 99/A DDDD/A ; Any 1 suit, matching dragons
+X 25 FFF 33/A 666/A 99/A DDDD/B ; Any 1 suit, another suit's dragon
+X 30 33/A 66/A 666/B 999/B NEWS ; Any 2 suits
+X 25 FF 3369/A 3333/B 3333/C | FF 3669/A 6666/B 6666/C | FF 3699/A 9999/B 9999/C ; Any 3 suits, pair 3, 6 or 9, kongs match the pair
+C 30 FF 333/A 666/A 999/A 369/B ; Any 2 suits
+
+section: Singles and Pairs
+C 50 NN EE WW SS aD/A aD/B aD/C ; Any 3 suits, any like number with matching dragons
+C 50 246688/A 246688/B 88/C ; Any 3 suits, these numbers only
+C 50 FF 3369/A 3669/B 3699/C ; Any 3 suits
+C 50 aabbccddeeffgg/A ; Any 1 suit, any 7 consecutive numbers
+C 50 1135799/A 1135799/B ; Any 2 suits
+C 75 FF 2026/A 2026/B 2026/C ; Any 3 suits

@@ -46,7 +46,11 @@ nonisolated struct Hand: Sendable, Identifiable {
     let section: String
     let concealed: Bool
     let value: Int
+    /// The groups as printed: the first of the hand's patterns.
     let groups: [PatternGroup]
+    /// Every pattern the hand allows. Most hands have one; a hand like "kong 2 or 6"
+    /// lists each choice.
+    let variants: [[PatternGroup]]
     let note: String
     /// The line as written in the card file, without the X/C and value.
     let text: String
@@ -140,6 +144,8 @@ nonisolated struct Card: Sendable {
     let id: String
     let title: String
     let year: Int?
+    /// Our own practice card, as opposed to a League card. Always free.
+    let isPractice: Bool
     let sections: [String]
     let hands: [Hand]
     /// Every concrete way to make every hand.
@@ -164,6 +170,7 @@ nonisolated struct Card: Sendable {
         var id = ""
         var title = ""
         var year: Int?
+        var isPractice = false
         var sections: [String] = []
         var hands: [Hand] = []
 
@@ -174,12 +181,13 @@ nonisolated struct Card: Sendable {
 
             if let colon = line.firstIndex(of: ":"),
                let key = Optional(line[..<colon].lowercased()),
-               ["id", "title", "year", "section"].contains(key) {
+               ["id", "title", "year", "kind", "section"].contains(key) {
                 let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
                 switch key {
                 case "id": id = value
                 case "title": title = value
                 case "year": year = Int(value)
+                case "kind": isPractice = value.lowercased() == "practice"
                 default: sections.append(value)
                 }
                 continue
@@ -196,6 +204,7 @@ nonisolated struct Card: Sendable {
         self.id = id
         self.title = title.isEmpty ? id : title
         self.year = year
+        self.isPractice = isPractice
         self.sections = sections
         self.hands = hands
         instances = hands.flatMap(Card.instances(of:))
@@ -220,21 +229,24 @@ nonisolated struct Card: Sendable {
             throw CardError.badLine(lineNumber, "bad value \(words[1])")
         }
 
-        var groups: [PatternGroup] = []
-        for word in words.dropFirst(2) {
-            groups += try parseToken(word, lineNumber: lineNumber)
+        // Alternatives are separated by "|": each is a full 14-tile pattern.
+        var variants: [[PatternGroup]] = []
+        for alternative in words.dropFirst(2).split(separator: "|") {
+            var groups: [PatternGroup] = []
+            for word in alternative {
+                groups += try parseToken(word, lineNumber: lineNumber)
+            }
+            let tiles = groups.reduce(0) { $0 + $1.count }
+            guard tiles == handSize else {
+                throw CardError.badLine(lineNumber, "\(tiles) tiles instead of \(handSize)")
+            }
+            variants.append(groups)
         }
-        let hand = Hand(
+        guard let first = variants.first else { throw CardError.badLine(lineNumber, "no tiles") }
+        return Hand(
             id: id, section: section, concealed: concealed, value: value,
-            groups: groups, note: note, text: words.dropFirst(2).joined(separator: " ")
+            groups: first, variants: variants, note: note, text: words.dropFirst(2).joined(separator: " ")
         )
-        guard hand.tileCount == handSize else {
-            throw CardError.badLine(lineNumber, "\(hand.tileCount) tiles instead of \(handSize)")
-        }
-        guard hand.groups.allSatisfy({ $0.count <= 5 }) else {
-            throw CardError.badLine(lineNumber, "a group has more than 5 tiles")
-        }
-        return hand
     }
 
     /// Splits a word like `2026/A` or `NNN` into groups of identical characters.
@@ -307,18 +319,26 @@ nonisolated struct Card: Sendable {
     /// Tries every choice of suits and starting number, dropping duplicates and any
     /// that would need more of a tile in singles and pairs than the set has.
     static func instances(of hand: Hand) -> [HandInstance] {
-        let suitVariables = Set(hand.groups.compactMap(\.suit)).sorted()
-        let highestOffset = hand.groups.compactMap { group -> Int? in
+        var seen = Set<[ConcreteGroup]>()
+        var result: [HandInstance] = []
+        for pattern in hand.variants {
+            result += instances(of: hand, pattern: pattern, seen: &seen)
+        }
+        return result
+    }
+
+    private static func instances(of hand: Hand, pattern: [PatternGroup], seen: inout Set<[ConcreteGroup]>) -> [HandInstance] {
+        let suitVariables = Set(pattern.compactMap(\.suit)).sorted()
+        let highestOffset = pattern.compactMap { group -> Int? in
             if case .relative(let offset) = group.face { return offset }
             return nil
         }.max()
         let bases = highestOffset.map { Array(1...(9 - $0)) } ?? [1]
 
-        var seen = Set<[ConcreteGroup]>()
         var result: [HandInstance] = []
         for suits in assignments(of: suitVariables.count) {
             for base in bases {
-                let groups = hand.groups.map { group -> ConcreteGroup in
+                let groups = pattern.map { group -> ConcreteGroup in
                     let suit = group.suit.map { suits[suitVariables.firstIndex(of: $0)!] }
                     let tile: Tile
                     switch group.face {
@@ -403,5 +423,49 @@ nonisolated struct Exposure: Hashable, Sendable, Codable {
 
     var tiles: [Tile] {
         Array(repeating: tile, count: count - jokers) + Array(repeating: .joker, count: jokers)
+    }
+}
+
+/// Every card the app ships with. The practice card and past years' League cards
+/// are free; the newest League card comes with the full game.
+nonisolated enum CardLibrary {
+    /// Every card file in the app, newest League card first and the practice card last.
+    static let all: [Card] = {
+        let urls = Bundle.main.urls(forResourcesWithExtension: "txt", subdirectory: nil) ?? []
+        let cards = urls.compactMap { url -> Card? in
+            guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+            return try? Card(text: text)
+        }
+        return sorted(cards.isEmpty ? [.practice] : cards)
+    }()
+
+    static func sorted(_ cards: [Card]) -> [Card] {
+        cards.sorted { a, b in
+            if a.isPractice != b.isPractice { return !a.isPractice }
+            return (a.year ?? 0, a.title) > (b.year ?? 0, b.title)
+        }
+    }
+
+    /// The card that needs the full game: the League card with the latest year.
+    static func paidCardID(in cards: [Card]) -> String? {
+        cards.filter { !$0.isPractice }.max { ($0.year ?? 0) < ($1.year ?? 0) }?.id
+    }
+
+    /// The year of the card that is for sale, or nil when the app has no League card.
+    static var currentYear: Int? {
+        paidCardID(in: all).flatMap { card(id: $0)?.year }
+    }
+
+    static func isPaid(_ card: Card, in cards: [Card] = all) -> Bool {
+        card.id == paidCardID(in: cards)
+    }
+
+    static func card(id: String, in cards: [Card] = all) -> Card? {
+        cards.first { $0.id == id }
+    }
+
+    /// The card to play when nothing is chosen: the newest one you may play.
+    static func defaultCard(unlocked: Bool, in cards: [Card] = all) -> Card {
+        cards.first { unlocked || !isPaid($0, in: cards) } ?? .practice
     }
 }

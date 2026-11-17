@@ -15,12 +15,16 @@
 #   F     flower                   N E W S   winds
 #   R G   red and green dragons    D     the dragon of the group's suit
 #
+# The header gives the card's id, title and year. "kind: practice" marks our
+# own card, which is always free; League cards leave it out.
+#
 # Numbers and D need a suit after a slash: /A, /B or /C. These stand for
 # any suits, but different letters always mean different suits.
 
 id: practice
 title: Practice Card
 year: 2026
+kind: practice
 
 section: 2026
 X 25 FFF 2026/A 222/B 6666/B ; 2026 in one suit, 2s and 6s in another

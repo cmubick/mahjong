@@ -63,6 +63,7 @@ nonisolated enum Bot {
 
         case .claim(let discard):
             let moves = round.legalMoves(for: player)
+            if moves == [.draw] { return .draw }
             if moves.contains(.mahjong) { return .mahjong }
 
             let neededNow = closest(TileCounts(hand), exposures: exposures, card: card).first?.needed ?? 99

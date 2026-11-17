@@ -51,9 +51,23 @@ final class TileNode: SKNode {
     private let outline: SKShapeNode
 
     var isDimmed = false {
-        didSet {
+        didSet { updateTint() }
+    }
+
+    /// The tile you just drew: a warm gold face until you discard.
+    var isNew = false {
+        didSet { updateTint() }
+    }
+
+    private func updateTint() {
+        if isDimmed {
             sprite.color = .black
-            sprite.colorBlendFactor = isDimmed ? 0.42 : 0
+            sprite.colorBlendFactor = 0.42
+        } else if isNew {
+            sprite.color = Style.gold
+            sprite.colorBlendFactor = 0.38
+        } else {
+            sprite.colorBlendFactor = 0
         }
     }
 

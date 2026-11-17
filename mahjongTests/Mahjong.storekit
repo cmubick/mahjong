@@ -1,0 +1,102 @@
+{
+  "identifier": "5E7E1157",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "3.99",
+      "familyShareable": true,
+      "internalID": "7000000101",
+      "localizations": [
+        {
+          "description": "Play the 2026 card.",
+          "displayName": "2026 Card",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.card.2026",
+      "referenceName": "2026 Card",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": true,
+      "internalID": "7000000102",
+      "localizations": [
+        {
+          "description": "The 2026 card, plus your hand history and stats.",
+          "displayName": "Full Game 2026",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.fullgame.2026",
+      "referenceName": "Full Game 2026",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": true,
+      "internalID": "7000000103",
+      "localizations": [
+        {
+          "description": "Your hand history and stats, for owners of this year's card.",
+          "displayName": "Full Game Upgrade",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.upgrade",
+      "referenceName": "Full Game Upgrade",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "7000000002",
+      "localizations": [
+        {
+          "description": "A small thank-you to the dealer.",
+          "displayName": "Small tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.tip.small",
+      "referenceName": "Small tip",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "7000000003",
+      "localizations": [
+        {
+          "description": "A generous thank-you to the dealer.",
+          "displayName": "Generous tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.tip.medium",
+      "referenceName": "Generous tip",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "7000000004",
+      "localizations": [
+        {
+          "description": "A very generous thank-you to the dealer.",
+          "displayName": "Big tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "mahjong.tip.large",
+      "referenceName": "Big tip",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}
