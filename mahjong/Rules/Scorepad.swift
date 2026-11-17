@@ -20,6 +20,18 @@ nonisolated struct Scorepad: Sendable, Codable {
     private(set) var wins = Array(repeating: 0, count: Scorepad.playerCount)
     /// When the pad was started or last cleared.
     private(set) var started: Date
+    /// Whether the players have rolled the dice to choose East on this sheet. Only used
+    /// with the wall and dice option; missing in older saves.
+    private(set) var rolledForEast: Bool?
+
+    /// A fresh sheet where nobody has rolled for East yet.
+    var needsRollForEast: Bool { handsPlayed == 0 && rolledForEast != true }
+
+    /// The highest roll deals first.
+    mutating func rolledForEast(winner: Int) {
+        dealer = winner
+        rolledForEast = true
+    }
 
     init(started: Date = Date()) {
         self.started = started
@@ -50,5 +62,6 @@ nonisolated struct Scorepad: Sendable, Codable {
         wins = Array(repeating: 0, count: Scorepad.playerCount)
         handsPlayed = 0
         started = date
+        rolledForEast = nil
     }
 }

@@ -528,6 +528,45 @@ struct ScorepadTests {
     }
 }
 
+struct DiceTests {
+
+    @Test func rollingForEastPicksTheHighestWithNoTie() {
+        for seed in 0..<200 {
+            var generator = SeededGenerator(seed: UInt64(seed))
+            let east = Dice.rollForEast(using: &generator)
+            let totals = east.rolls.map { $0.0 + $0.1 }
+            #expect(east.rolls.allSatisfy { (1...6).contains($0.0) && (1...6).contains($0.1) })
+            #expect(totals[east.winner] == totals.max())
+            #expect(totals.filter { $0 == totals.max() }.count == 1)
+        }
+    }
+
+    @Test func eachWallBreaksFromItsOwnersRightHandEnd() {
+        // You (0) at the bottom, Right (1) on the right, Across (2) at the top, Left (3) on the left.
+        #expect(Dice.breakPoint(dealer: 0, total: 7) == 7)
+        #expect(Dice.breakPoint(dealer: 1, total: 8) == 65)
+        #expect(Dice.breakPoint(dealer: 2, total: 2) == 40)
+        #expect(Dice.breakPoint(dealer: 3, total: 12) == 31)
+        // A break past the end of the ring wraps round to the start.
+        #expect(Dice.breakPoint(dealer: 1, total: 19 + 2) == 2)
+    }
+
+    @Test func theScorepadRollsForEastOnceAFreshSheet() throws {
+        var generator = SeededGenerator(seed: 9)
+        var pad = Scorepad()
+        #expect(pad.needsRollForEast)
+        pad.rolledForEast(winner: 2)
+        #expect(!pad.needsRollForEast)
+        var round = pad.deal(card: .practice, charleston: false, using: &generator)
+        #expect(round.dealer == 2)
+        try playOut(&round)
+        pad.record(round)
+        #expect(!pad.needsRollForEast)
+        pad.clear(at: Date())
+        #expect(pad.needsRollForEast)
+    }
+}
+
 struct SavedGameTests {
 
     /// Plays a seeded bot game for a while so there is a realistic position to save.

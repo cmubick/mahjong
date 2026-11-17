@@ -36,11 +36,11 @@ Items marked **TODO** need a decision or a detail from you.
 >
 > THIS YEAR'S CARD AND THE FULL GAME
 > • This year's card: play the current card's hands.
-> • The full game: this year's card, plus your hand history and stats, playing without the Charleston, and a choice of how long each discard can be called.
+> • The full game: this year's card, plus your hand history and stats, playing without the Charleston, the wall and dice (roll for East, break the wall, deal from it), and a choice of how long each discard can be called.
 > • Already bought this year's card? Upgrade to the full game for less.
 > • Next year's card is sold separately.
 >
-> You need your own official card from the National Mah Jongg League to play a League card. This app is independent and is not affiliated with the National Mah Jongg League.
+> You need your own official card from the National Mah Jongg League to play a League card. The League's printed card and the card in this app are bought separately: buying one doesn't include the other. This app is independent and is not affiliated with the National Mah Jongg League.
 >
 > You can also leave a tip. Tips are optional and unlock nothing extra.
 
@@ -69,8 +69,8 @@ Notes:
 Paste into each product's **Review Information → Review Notes**:
 
 - **2026 Card** (`mahjong.card.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "2026 card". After buying, tap the card name on the start menu ("Practice Card ›"): the 2026 Card is listed and can be chosen, and "Deal" plays a hand with it. "Hands" next to it shows every hand on the card. Players are told they need their own official card from the National Mah Jongg League.
-- **Full Game 2026** (`mahjong.fullgame.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "Full game". After buying: the 2026 Card can be chosen from the card name on the start menu; "History" on the start menu opens; the Charleston "Off" option and the 2 sec / 5 sec call times are no longer locked.
-- **Full Game Upgrade** (`mahjong.upgrade`): Offered only to people who already own the 2026 Card. Buy "2026 card" first; the store screen then offers "Upgrade to the full game". After buying: "History" on the start menu opens, and the Charleston "Off" option and the 2 sec / 5 sec call times are no longer locked.
+- **Full Game 2026** (`mahjong.fullgame.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "Full game". After buying: the 2026 Card can be chosen from the card name on the start menu; "History" on the start menu opens; the "Charleston" and "Wall & dice" options and the 2 sec / 5 sec call times are no longer locked.
+- **Full Game Upgrade** (`mahjong.upgrade`): Offered only to people who already own the 2026 Card. Buy "2026 card" first; the store screen then offers "Upgrade to the full game". After buying: "History" on the start menu opens, and the "Charleston" and "Wall & dice" options and the 2 sec / 5 sec call times are no longer locked.
 - **Small tip, Generous tip, Big tip** (`mahjong.tip.small`, `.medium`, `.large`): On the start menu, tap "Tip jar". Tips are optional, can be given more than once, and unlock nothing; the screen thanks the player after a tip.
 
 ## Free code (offer code)
@@ -148,7 +148,7 @@ No account, login or setup is needed, and the app works offline.
 - The game menu (☰) offers sound, the card, the rules and the main menu.
 - In-app purchases are on the store screen, opened with "Unlock full game" on the start menu or by tapping any option marked with a lock:
   - 2026 Card (non-consumable): play the 2026 card.
-  - Full Game 2026 (non-consumable): the 2026 card plus the History screen, turning the Charleston off, and a choice of call time.
+  - Full Game 2026 (non-consumable): the 2026 card plus the History screen, turning the Charleston off, showing the wall and dice, and a choice of call time.
   - Full Game Upgrade (non-consumable): shown only to people who already own the 2026 card; adds the History screen and game options.
   - Three tips (consumable): optional, unlock nothing.
   "Restore purchases" and "Redeem code" are on the same screen.

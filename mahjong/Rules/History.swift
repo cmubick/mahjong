@@ -20,11 +20,14 @@ nonisolated struct HandRecord: Codable, Sendable, Equatable {
     var jokerless = false
     /// What each seat won or paid.
     var payments: [Int]
+    /// Who was East, so a seat can be named by its wind. Missing in older records.
+    var dealer: Int?
 
     init(round: Round, date: Date = Date()) {
         self.date = date
         cardTitle = round.card.title
         payments = round.payments()
+        dealer = round.dealer
         if case .over(.mahjong(let win)) = round.phase {
             let hand = round.card.hands[win.hand]
             winner = win.winner

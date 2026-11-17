@@ -55,7 +55,7 @@ struct HelpPage {
         HelpPage(
             title: "The card",
             examples: [n(.bams, 2) + [.dragon(.white)] + n(.bams, 2, 6), same(.number(.craks, 3), 3)],
-            text: "Each line of the card is a hand. Some are fixed; others say \"any suit\" or \"any run\", so they can be made several ways.\n\nTap Card at any time to see every hand, closest first. To play a League card, you need your own official card from the National Mah Jongg League."
+            text: "Each line of the card is a hand. Some are fixed; others say \"any suit\" or \"any run\", so they can be made several ways.\n\nTap Card at any time to see every hand, closest first. To play a League card, you need your own official card from the National Mah Jongg League, and the card bought in this app: buying one doesn't include the other."
         ),
         HelpPage(
             title: "The Charleston",
