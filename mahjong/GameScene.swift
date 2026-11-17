@@ -34,6 +34,8 @@ final class GameScene: SKScene {
         case card(page: Int)
         /// Every hand on a card, to read through.
         case cardHands(id: String, page: Int)
+        /// One hand, large.
+        case handDetail(cardID: String, hand: Int)
         case summary(payments: [Int])
         case gameMenu
     }
@@ -237,6 +239,16 @@ final class GameScene: SKScene {
                 return
             case "store":
                 overlay = .store
+            case "magnify":
+                // The press-and-hold magnifier, held open over a rack tile.
+                overlay = nil
+                relayout()
+                dealNewHand()
+                after(3) { [weak self] in
+                    guard let self, let node = self.tileNodes.first(where: { $0.area == .rack && $0.rackIndex == 3 }) else { return }
+                    self.showMagnifier(for: node.tile, at: node.position)
+                }
+                return
             case "history":
                 // Twelve quick bot hands, shown but never saved.
                 var generator = SeededGenerator(seed: 11)
@@ -1330,6 +1342,86 @@ final class GameScene: SKScene {
 
     // MARK: - Touches
 
+    // MARK: - Holding a tile
+
+    /// Where the finger is now, while it is down.
+    private var touchPoint: CGPoint?
+    /// Bumped on every touch, so an old hold timer does nothing.
+    private var holdToken = 0
+    /// Whether this touch has shown the magnifier.
+    private var magnified = false
+    private var magnifier: SKNode?
+
+    /// The tile under a point: inside the open panel if there is one, else on the table.
+    private func tileNode(at point: CGPoint) -> TileNode? {
+        let tiles = nodes(at: point).compactMap { ancestor(of: $0, as: TileNode.self) }
+            .filter { overlay == nil || $0.inParentHierarchy(overlayLayer) }
+        return tiles.max { $0.zPosition < $1.zPosition }
+    }
+
+    /// The name shown in the magnifier, and a short second line.
+    private func spokenName(_ tile: Tile) -> (name: String, detail: String) {
+        switch tile {
+        case .number(let suit, let rank):
+            return ("\(rank) \(suit.name)", "\(suit.name)s go with the \(suit.dragon == .white ? "Soap" : suit.dragon.name + " Dragon")")
+        case .wind(let wind):
+            let name = ["N": "North", "E": "East", "W": "West", "S": "South"][wind.letter] ?? wind.letter
+            return ("\(name) Wind", "A wind")
+        case .dragon(.white):
+            return ("Soap", "The white dragon · goes with Dots · also 0 in years")
+        case .dragon(let dragon):
+            return ("\(dragon.name) Dragon", "Goes with \(dragon.suit.name)s")
+        case .flower:
+            return ("Flower", "There are eight")
+        case .joker:
+            return ("Joker", "Stands in for any tile in a group of 3 or more")
+        }
+    }
+
+    private func showMagnifier(for tile: Tile, at point: CGPoint) {
+        let u = metrics.u
+        magnifier?.removeFromParent()
+        let node = SKNode()
+        node.zPosition = 3000
+        let (name, detail) = spokenName(tile)
+        let panelSize = CGSize(width: 240 * u, height: 236 * u)
+        let back = SKShapeNode(rectOf: panelSize, cornerRadius: 18 * u)
+        back.fillColor = Style.panel.withAlphaComponent(0.96)
+        back.strokeColor = Style.gold
+        back.lineWidth = 2
+        node.addChild(back)
+        let big = TileNode(tile: tile)
+        big.setScale(96 * u / TileArt.size.width)
+        big.position = CGPoint(x: 0, y: 36 * u)
+        node.addChild(big)
+        let title = Style.label(name, size: 24 * u, font: Style.bold, color: Style.gold)
+        title.position = CGPoint(x: 0, y: -66 * u)
+        node.addChild(title)
+        let line = Style.label(detail, size: 12 * u, color: Style.faint)
+        line.numberOfLines = 0
+        line.preferredMaxLayoutWidth = panelSize.width - 24 * u
+        line.position = CGPoint(x: 0, y: -94 * u)
+        node.addChild(line)
+
+        // Above the finger where there is room, else below it; always on screen.
+        var y = point.y + 70 * u + panelSize.height / 2
+        if y + panelSize.height / 2 > size.height - safeInsets.top {
+            y = point.y - 70 * u - panelSize.height / 2
+        }
+        let x = min(max(point.x, panelSize.width / 2 + 8 * u), size.width - panelSize.width / 2 - 8 * u)
+        node.position = CGPoint(x: x, y: y)
+        addChild(node)
+        magnifier = node
+    }
+
+    private func endHold() {
+        holdToken += 1
+        touchPoint = nil
+        magnified = false
+        magnifier?.removeFromParent()
+        magnifier = nil
+    }
+
     private func ancestor<T: SKNode>(of node: SKNode, as type: T.Type) -> T? {
         var current: SKNode? = node
         while let candidate = current {
@@ -1339,9 +1431,61 @@ final class GameScene: SKScene {
         return nil
     }
 
+    /// Where the current touch started, to tell a swipe from a tap.
+    private var touchStart: CGPoint?
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let point = touches.first?.location(in: self) else { return }
+        touchStart = point
+        touchPoint = point
+        magnified = false
+        // Holding a finger on any tile shows it large, with its name.
+        holdToken += 1
+        let token = holdToken
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(0.35))
+            guard let self, self.holdToken == token, let point = self.touchPoint,
+                  let tile = self.tileNode(at: point) else { return }
+            self.magnified = true
+            Haptics.tick()
+            self.showMagnifier(for: tile.tile, at: point)
+        }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let point = touches.first?.location(in: self) else { return }
+        touchPoint = point
+        // Slide across tiles to read each one.
+        if magnified, let tile = tileNode(at: point) {
+            showMagnifier(for: tile.tile, at: point)
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        endHold()
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
-        let hits = nodes(at: touch.location(in: self))
+        let wasMagnified = magnified
+        endHold()
+        // Letting go after a hold only puts the magnifier away.
+        if wasMagnified { return }
+        let point = touch.location(in: self)
+        let hits = nodes(at: point)
+
+        // A sideways swipe turns the page in the card lists.
+        if let paging, let start = touchStart, paging.pages > 1 {
+            let dx = point.x - start.x
+            let dy = point.y - start.y
+            if abs(dx) > 50 * metrics.u && abs(dx) > abs(dy) * 1.5 {
+                let page = dx < 0 ? (paging.page + 1) % paging.pages : (paging.page + paging.pages - 1) % paging.pages
+                Sounds.shared.play(.slide)
+                Haptics.tick()
+                show(paging.make(page))
+                return
+            }
+        }
 
         if overlay != nil {
             let button = hits.lazy
@@ -1443,6 +1587,7 @@ final class GameScene: SKScene {
 
     private func rebuildOverlay() {
         overlayLayer.removeAllChildren()
+        paging = nil
         guard let overlay, isSetUp else { return }
         let m = metrics
 
@@ -1461,14 +1606,14 @@ final class GameScene: SKScene {
         case .store: height = 520 * m.u
         case .tipJar: height = 400 * m.u
         case .cards: height = min(CGFloat(170 + CardLibrary.all.count * 64) * m.u, fullHeight)
-        case .cardHands:
-            width = min(size.width - 24 * m.u, 420 * m.u)
-            height = min(640 * m.u, fullHeight)
+        case .cardHands, .card:
+            width = min(size.width - 16 * m.u, 520 * m.u)
+            height = min(820 * m.u, fullHeight)
+        case .handDetail:
+            width = min(size.width - 16 * m.u, 520 * m.u)
+            height = min(440 * m.u, fullHeight)
         case .history: height = min(600 * m.u, fullHeight)
         case .newHandConfirm, .clearConfirm: height = 250 * m.u
-        case .card:
-            width = min(size.width - 24 * m.u, 420 * m.u)
-            height = min(560 * m.u, fullHeight)
         case .summary:
             width = min(size.width - 24 * m.u, 420 * m.u)
             height = 470 * m.u
@@ -1495,6 +1640,8 @@ final class GameScene: SKScene {
             buildCards(in: panel, width: width, height: height, m: m)
         case .cardHands(let id, let page):
             buildCardHands(in: panel, width: width, height: height, cardID: id, page: page, m: m)
+        case .handDetail(let cardID, let hand):
+            buildHandDetail(in: panel, width: width, height: height, cardID: cardID, handIndex: hand, m: m)
         case .history:
             buildHistory(in: panel, width: width, height: height, m: m)
         case .newHandConfirm:
@@ -1734,70 +1881,207 @@ final class GameScene: SKScene {
 
     /// Every hand on a card, page by page, each shown one way it can be made.
     private func buildCardHands(in panel: SKNode, width: CGFloat, height: CGFloat, cardID: String, page: Int, m: Metrics) {
-        let u = m.u
         let card = (round?.card.id == cardID ? round?.card : nil) ?? CardLibrary.card(id: cardID) ?? .practice
-        let top = height / 2
-        add(Style.label(card.title, size: 22 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 30 * u)
+        let rows = card.hands.map { hand -> ListRow in
+            let instance = card.instances.first { $0.hand == hand.id }
+            let tiles = instance.map { $0.groups.map { group in (0..<group.count).map { _ in (tile: group.tile, have: true) } } } ?? []
+            return ListRow(hand: hand, status: .none, tiles: tiles)
+        }
+        buildHandList(in: panel, width: width, height: height, card: card, rows: rows, page: page,
+                      subtitle: "Each hand is shown one way it can be made",
+                      pageOverlay: { .cardHands(id: cardID, page: $0) }, m: m) { [weak self] in
+            guard let self else { return }
+            self.show(self.handsReturn)
+        }
+    }
 
-        var y = top - 56 * u
+    // MARK: - Hands, large
+
+    /// A hand in one of the card lists.
+    private struct ListRow {
+        enum Status {
+            /// No progress shown: reading the card away from a game.
+            case none
+            /// Tiles still needed, or nil when your exposures rule the hand out.
+            case needed(Int?)
+        }
+        let hand: Hand
+        let status: Status
+        let tiles: [[(tile: Tile, have: Bool)]]
+    }
+
+    /// The list on screen and how to turn its pages, for the sideways swipe.
+    private var paging: (page: Int, pages: Int, make: (Int) -> Overlay)?
+    /// Where a single hand's Back button goes.
+    private var detailReturn: Overlay = .menu
+
+    private let largestListTile: CGFloat = 34
+
+    /// Splits a hand's groups into lines of at most `limit` tiles, breaking between
+    /// groups, and never inside a run of singles like 2026.
+    private func tileLines(_ groups: [[(tile: Tile, have: Bool)]], limit: Int) -> [[[(tile: Tile, have: Bool)]]] {
+        let total = groups.reduce(0) { $0 + $1.count }
+        guard total > limit else { return [groups] }
+        var best: (index: Int, score: Int)?
+        var count = 0
+        for index in 1..<groups.count {
+            count += groups[index - 1].count
+            let natural = groups[index].count > 1 || groups[index - 1].count > 1
+            let longest = max(count, total - count)
+            guard longest <= limit + 2 else { continue }
+            let score = longest * 10 + (natural ? 0 : 5)
+            if best == nil || score < best!.score { best = (index, score) }
+        }
+        let split = best?.index ?? groups.count / 2
+        return [Array(groups[..<split]), Array(groups[split...])]
+    }
+
+    /// Draws a hand's tiles as large as they fit, in one or two lines. Returns the height used.
+    @discardableResult
+    private func addHandTiles(_ groups: [[(tile: Tile, have: Bool)]], to panel: SKNode, left: CGFloat, top: CGFloat,
+                              width: CGFloat, largest: CGFloat, m: Metrics) -> CGFloat {
+        let gap = 4 * m.u
+        let oneLine = (width - gap * CGFloat(gapCount(groups))) / 14
+        let lines = oneLine >= largest * m.u ? [groups] : tileLines(groups, limit: 8)
+        let tileWidth = lines.map { line -> CGFloat in
+            let count = CGFloat(line.reduce(0) { $0 + $1.count })
+            return (width - gap * CGFloat(gapCount(line))) / max(count, 8)
+        }.min().map { min($0, largest * m.u) } ?? largest * m.u
+        let tileHeight = tileWidth * 4 / 3
+        var y = top - tileHeight / 2
+        for line in lines {
+            addTiles(line, to: panel, left: left, y: y, tileWidth: tileWidth, gap: gap)
+            y -= tileHeight + 6 * m.u
+        }
+        return CGFloat(lines.count) * (tileHeight + 6 * m.u)
+    }
+
+    private func neededText(_ needed: Int?) -> (String, SKColor) {
+        switch needed {
+        case .some(0): ("Mahjong!", Style.gold)
+        case .some(let count): ("\(count) away", count <= 3 ? Style.gold : .white)
+        case .none: ("ruled out", SKColor(white: 1, alpha: 0.4))
+        }
+    }
+
+    /// A few hands to a page, with tiles big enough to read. Tap a hand to see it on
+    /// its own; swipe sideways or use the arrows to turn the page.
+    private func buildHandList(in panel: SKNode, width: CGFloat, height: CGFloat, card: Card, rows: [ListRow], page: Int,
+                               subtitle: String, pageOverlay: @escaping (Int) -> Overlay, m: Metrics,
+                               close: @escaping () -> Void) {
+        let u = m.u
+        let top = height / 2
+        add(Style.label(card.title, size: 22 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 28 * u)
+        var y = top - 52 * u
+        add(Style.label(subtitle + " · tap a hand to enlarge", size: 11.5 * u, color: Style.faint), to: panel, y: y)
         if !card.isPractice {
-            add(Style.label("Play with your own official card from the League.", size: 11.5 * u, color: Style.faint),
-                to: panel, y: y)
-            let link = secondary("Buy an official card ›", size: CGSize(width: 190 * u, height: 26 * u),
+            y -= 26 * u
+            let link = secondary("Own an official card? Buy one from the League ›", size: CGSize(width: width - 60 * u, height: 26 * u),
                                  fontSize: 12 * u, color: Style.gold) {
                 UIApplication.shared.open(GameScene.leagueURL)
             }
-            add(link, to: panel, y: y - 24 * u)
-            y -= 52 * u
-        } else {
-            add(Style.label("Each hand is shown one way it can be made.", size: 11.5 * u, color: Style.faint),
-                to: panel, y: y)
-            y -= 22 * u
+            add(link, to: panel, y: y)
         }
 
-        let rowHeight = 62 * u
-        let firstRow = y - 22 * u
-        // Each row reaches about 40 points below its caption; keep clear of the buttons.
-        let perPage = max(3, Int((firstRow - (-height / 2 + 100 * u)) / rowHeight) + 1)
-        let pages = max(1, (card.hands.count + perPage - 1) / perPage)
-        let page = min(max(page, 0), pages - 1)
+        let inner = width - 32 * u
         let left = -width / 2 + 16 * u
-        let space = width - 32 * u
-        y = firstRow
-        for hand in card.hands.dropFirst(page * perPage).prefix(perPage) {
-            let caption = "\(hand.section) · \(hand.value)\(hand.concealed ? " · concealed" : "")"
-            let label = Style.label(caption, size: 11.5 * u, font: Style.bold, color: Style.faint)
-            label.horizontalAlignmentMode = .left
-            add(label, to: panel, x: left, y: y + 14 * u)
-            if let instance = card.instances.first(where: { $0.hand == hand.id }) {
-                let groups = instance.groups.map { group in (0..<group.count).map { _ in (group.tile, true) } }
-                let gaps = 3 * u * CGFloat(gapCount(groups))
-                let tileWidth = min((space - gaps) / 14, 22 * u)
-                addTiles(groups, to: panel, left: left, y: y - 8 * u, tileWidth: tileWidth, gap: 3 * u)
+        let probeWidth = min((inner - 12 * u) / 8, largestListTile * u)
+        // Caption, two lines of tiles, and the note under them.
+        let rowHeight = 16 * u + 2 * (probeWidth * 4 / 3 + 6 * u) + 22 * u
+        let listTop = y - 18 * u
+        let listBottom = -height / 2 + 60 * u
+        let perPage = max(2, Int((listTop - listBottom) / rowHeight))
+        let pages = max(1, (rows.count + perPage - 1) / perPage)
+        let page = min(max(page, 0), pages - 1)
+        paging = (page, pages, pageOverlay)
+
+        y = listTop
+        for row in rows.dropFirst(page * perPage).prefix(perPage) {
+            let hand = row.hand
+            // The whole row is a button that opens the hand on its own.
+            let target = ButtonNode(text: "", size: CGSize(width: width - 16 * u, height: rowHeight - 6 * u), fontSize: 1,
+                                    fill: SKColor(white: 1, alpha: 0.05), outlined: false) { [weak self] in
+                guard let self else { return }
+                self.detailReturn = pageOverlay(page)
+                self.show(.handDetail(cardID: card.id, hand: hand.id))
             }
-            let note = Style.label(hand.note, size: 11 * u, color: SKColor(white: 1, alpha: 0.6))
+            add(target, to: panel, y: y - rowHeight / 2 + 3 * u)
+            target.zPosition = 0.5
+
+            let caption = "\(hand.section) · \(hand.value)\(hand.concealed ? " · concealed" : "")"
+            let label = Style.label(caption, size: 12.5 * u, font: Style.bold, color: Style.faint)
+            label.horizontalAlignmentMode = .left
+            add(label, to: panel, x: left, y: y - 10 * u)
+            if case .needed(let needed) = row.status {
+                let (text, color) = neededText(needed)
+                let badge = Style.label(text, size: 14 * u, font: Style.bold, color: color)
+                badge.horizontalAlignmentMode = .right
+                add(badge, to: panel, x: -left, y: y - 10 * u)
+            }
+            let used = addHandTiles(row.tiles, to: panel, left: left, top: y - 22 * u, width: inner, largest: largestListTile, m: m)
+            let note = Style.label(hand.note, size: 11.5 * u, color: SKColor(white: 1, alpha: 0.65))
             note.horizontalAlignmentMode = .left
-            add(note, to: panel, x: left, y: y - 30 * u)
+            add(note, to: panel, x: left, y: y - 22 * u - used - 6 * u)
             y -= rowHeight
         }
 
         let buttonY = -height / 2 + 32 * u
         if pages > 1 {
-            let previous = ButtonNode.plain(text: "‹", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) {
-                [weak self] in self?.show(.cardHands(id: cardID, page: (page + pages - 1) % pages))
+            let previous = ButtonNode.plain(text: "‹", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) { [weak self] in
+                self?.show(pageOverlay((page + pages - 1) % pages))
             }
             add(previous, to: panel, x: -width / 2 + 44 * u, y: buttonY)
             add(Style.label("\(page + 1) of \(pages)", size: 13 * u, color: Style.faint), to: panel, x: -width / 2 + 110 * u, y: buttonY)
-            let next = ButtonNode.plain(text: "›", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) {
-                [weak self] in self?.show(.cardHands(id: cardID, page: (page + 1) % pages))
+            let next = ButtonNode.plain(text: "›", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) { [weak self] in
+                self?.show(pageOverlay((page + 1) % pages))
             }
             add(next, to: panel, x: -width / 2 + 176 * u, y: buttonY)
         }
-        let close = ButtonNode(text: "Close", size: CGSize(width: 110 * u, height: 40 * u), fontSize: 16 * u) { [weak self] in
-            guard let self else { return }
-            self.show(self.handsReturn)
+        let closeButton = ButtonNode(text: "Close", size: CGSize(width: 110 * u, height: 40 * u), fontSize: 16 * u, action: close)
+        add(closeButton, to: panel, x: width / 2 - 70 * u, y: buttonY)
+    }
+
+    /// One hand, as large as it fits: during a hand, the way you are closest to with
+    /// the tiles you still need dimmed; otherwise one way to make it.
+    private func buildHandDetail(in panel: SKNode, width: CGFloat, height: CGFloat, cardID: String, handIndex: Int, m: Metrics) {
+        let u = m.u
+        let inGame = round?.card.id == cardID
+        let card = (inGame ? round?.card : nil) ?? CardLibrary.card(id: cardID) ?? .practice
+        guard card.hands.indices.contains(handIndex) else { return }
+        let hand = card.hands[handIndex]
+        let top = height / 2
+
+        add(Style.label(hand.section, size: 24 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 36 * u)
+        add(Style.label("\(hand.concealed ? "Concealed" : "Exposed") · worth \(hand.value)", size: 14 * u, color: Style.faint),
+            to: panel, y: top - 62 * u)
+
+        var tiles: [[(tile: Tile, have: Bool)]] = []
+        var y = top - 96 * u
+        if inGame, let round, let row = cardRows(for: round).first(where: { $0.hand == handIndex }) {
+            tiles = row.tiles
+            let color = neededText(row.needed).1
+            let status: String
+            switch row.needed {
+            case .some(0): status = "You have this hand. Mahjong!"
+            case .some(let count): status = "You need \(count) more tile\(count == 1 ? "" : "s"): " + (count <= 3 ? "close!" : "the dim ones")
+            case .none: status = "Your exposed groups rule this hand out"
+            }
+            add(Style.label(status, size: 15 * u, font: Style.bold, color: color), to: panel, y: y)
+            y -= 24 * u
+        } else if let instance = card.instances.first(where: { $0.hand == handIndex }) {
+            tiles = instance.groups.map { group in (0..<group.count).map { _ in (tile: group.tile, have: true) } }
         }
-        add(close, to: panel, x: width / 2 - 70 * u, y: buttonY)
+
+        let inner = width - 32 * u
+        let used = addHandTiles(tiles, to: panel, left: -width / 2 + 16 * u, top: y - 8 * u, width: inner, largest: 56, m: m)
+        y -= used + 26 * u
+        add(paragraph(hand.note, size: 15 * u, width: inner), to: panel, y: y)
+
+        let back = ButtonNode(text: "Back", size: CGSize(width: width - 40 * u, height: 46 * u), fontSize: 17 * u) { [weak self] in
+            guard let self else { return }
+            self.show(self.detailReturn)
+        }
+        add(back, to: panel, y: -height / 2 + 36 * u)
     }
 
     /// Your record over every hand you have played, with the most recent hands.
@@ -2125,59 +2409,16 @@ final class GameScene: SKScene {
 
     /// The card, closest hands first, showing which tiles of each you already have.
     private func buildCard(in panel: SKNode, width: CGFloat, height: CGFloat, page: Int, m: Metrics) {
-        let u = m.u
         guard let round else { return }
         let card = round.card
-        let rows = cardRows(for: round)
-        let perPage = max(4, Int((height - 120 * u) / (46 * u)))
-        let pages = max(1, (rows.count + perPage - 1) / perPage)
-        let page = min(page, pages - 1)
-
-        add(Style.label(card.title, size: 22 * u, font: Style.bold, color: Style.gold), to: panel, y: height / 2 - 28 * u)
-        add(Style.label("Closest hands first · dim tiles are ones you still need", size: 11.5 * u, color: Style.faint),
-            to: panel, y: height / 2 - 50 * u)
-
-        let left = -width / 2 + 14 * u
-        let tileLeft = left + 54 * u
-        let tileSpace = width - 54 * u - 28 * u
-        var y = height / 2 - 84 * u
-        for row in rows.dropFirst(page * perPage).prefix(perPage) {
-            let hand = card.hands[row.hand]
-            let neededText: String
-            let color: SKColor
-            switch row.needed {
-            case .some(0): neededText = "✓"; color = Style.gold
-            case .some(let needed): neededText = "\(needed)"; color = needed <= 3 ? Style.gold : .white
-            case .none: neededText = "–"; color = SKColor(white: 1, alpha: 0.35)
-            }
-            add(Style.label(neededText, size: 20 * u, font: Style.bold, color: color), to: panel, x: left + 16 * u, y: y - 6 * u)
-            let caption = "\(hand.section) · \(hand.value)\(hand.concealed ? " · concealed" : "")"
-            let label = Style.label(caption, size: 11 * u, color: row.needed == nil ? SKColor(white: 1, alpha: 0.4) : Style.faint)
-            label.horizontalAlignmentMode = .left
-            add(label, to: panel, x: tileLeft, y: y + 8 * u)
-            let tileWidth = min((tileSpace - 3 * u * CGFloat(gapCount(row.tiles))) / 14, 19 * u)
-            addTiles(row.tiles, to: panel, left: tileLeft, y: y - 12 * u, tileWidth: tileWidth, gap: 3 * u)
-            y -= 46 * u
+        let rows = cardRows(for: round).map { row in
+            ListRow(hand: card.hands[row.hand], status: .needed(row.needed), tiles: row.tiles)
         }
-
-        let buttonY = -height / 2 + 32 * u
-        if pages > 1 {
-            let previous = ButtonNode.plain(text: "‹", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) { [weak self] in
-                self?.overlay = .card(page: (page + pages - 1) % pages)
-                self?.rebuildOverlay()
-            }
-            add(previous, to: panel, x: -width / 2 + 44 * u, y: buttonY)
-            add(Style.label("\(page + 1) of \(pages)", size: 13 * u, color: Style.faint), to: panel, x: -width / 2 + 110 * u, y: buttonY)
-            let next = ButtonNode.plain(text: "›", size: CGSize(width: 50 * u, height: 40 * u), fontSize: 22 * u) { [weak self] in
-                self?.overlay = .card(page: (page + 1) % pages)
-                self?.rebuildOverlay()
-            }
-            add(next, to: panel, x: -width / 2 + 176 * u, y: buttonY)
-        }
-        let close = ButtonNode(text: "Close", size: CGSize(width: 110 * u, height: 40 * u), fontSize: 16 * u) { [weak self] in
+        buildHandList(in: panel, width: width, height: height, card: card, rows: rows, page: page,
+                      subtitle: "Closest first · dim tiles are ones you still need",
+                      pageOverlay: { .card(page: $0) }, m: m) { [weak self] in
             self?.closeOverlay()
         }
-        add(close, to: panel, x: width / 2 - 70 * u, y: buttonY)
     }
 
     private struct CardRow {

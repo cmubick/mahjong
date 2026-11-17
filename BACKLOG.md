@@ -26,5 +26,7 @@ Things to do after the current work, roughly in the order they were raised.
 
 ## Gameplay
 
+- **Reorder your rack.** Let the player drag tiles into their own order instead of the automatic sort, and keep that order as tiles come and go.
+- **Track a hand.** Optionally pick a hand from the card and highlight, in your rack, the tiles that belong to it, so you can see what to keep and what to pass or discard. The single-hand view (tap a hand on the Card) is the place for a "Track this hand" button.
 - **Difficulty.** The bots look only at their own tiles and play well: they finish about 8 hands in 10, which is more often than people do. Easy bots could call less and not trade for jokers; hard ones could avoid throwing tiles an opponent's exposures show they need.
 - **Practice card balance.** In bot games most wins are from the Runs section, because those hands can be made in the most ways.
