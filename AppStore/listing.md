@@ -69,9 +69,9 @@ Notes:
 Paste into each product's **Review Information → Review Notes**:
 
 - **2026 Card** (`mahjong.card.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "2026 card". After buying, tap the card name on the start menu ("Practice Card ›"): the 2026 Card is listed and can be chosen, and "Deal" plays a hand with it. "Hands" next to it shows every hand on the card. Players are told they need their own official card from the National Mah Jongg League.
-- **Full Game 2026** (`mahjong.fullgame.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "Full game". After buying: the 2026 Card can be chosen from the card name on the start menu; "History" on the start menu opens; the "Charleston" and "Wall & dice" options and the 2 sec / 5 sec call times are no longer locked.
-- **Full Game Upgrade** (`mahjong.upgrade`): Offered only to people who already own the 2026 Card. Buy "2026 card" first; the store screen then offers "Upgrade to the full game". After buying: "History" on the start menu opens, and the "Charleston" and "Wall & dice" options and the 2 sec / 5 sec call times are no longer locked.
-- **Small tip, Generous tip, Big tip** (`mahjong.tip.small`, `.medium`, `.large`): On the start menu, tap "Tip jar". Tips are optional, can be given more than once, and unlock nothing; the screen thanks the player after a tip.
+- **Full Game 2026** (`mahjong.fullgame.2026`): On the start menu, tap "Unlock full game" to open the store screen, then tap "Full game". After buying: the 2026 Card can be chosen from the card name on the start menu; "History" on the start menu opens; under "Options" on the start menu, Charleston Off, Wall & dice On and the 2 sec / 5 sec call times are no longer locked.
+- **Full Game Upgrade** (`mahjong.upgrade`): Offered only to people who already own the 2026 Card. Buy "2026 card" first; the store screen then offers "Upgrade to the full game". After buying: "History" on the start menu opens, and under "Options" on the start menu, Charleston Off, Wall & dice On and the 2 sec / 5 sec call times are no longer locked.
+- **Small tip, Generous tip, Big tip** (`mahjong.tip.small`, `.medium`, `.large`): On the start menu, tap "More", then "Tip jar". Tips are optional, can be given more than once, and unlock nothing; the screen thanks the player after a tip.
 
 ## Free code (offer code)
 
@@ -145,7 +145,9 @@ No account, login or setup is needed, and the app works offline.
 - "How to play" on the start menu explains the tiles, the card, the Charleston, calling, jokers and scoring.
 - "Deal" starts a hand with the free Practice Card, which was written for this app.
 - "Card" during a hand lists every hand on the card, closest first; tap a hand to see it large. Press and hold any tile to see it large with its name.
-- The game menu (☰) offers sound, the card, the rules and the main menu.
+- "Options" on the start menu and in the game menu (☰) holds the settings: Charleston, Wall & dice, time to call, and sound.
+- "More" on the start menu has What's next, Send feedback (an email to the developer), the tip jar and the store.
+- The game menu (☰) also offers the card, the rules and the main menu.
 - In-app purchases are on the store screen, opened with "Unlock full game" on the start menu or by tapping any option marked with a lock:
   - 2026 Card (non-consumable): play the 2026 card.
   - Full Game 2026 (non-consumable): the 2026 card plus the History screen, turning the Charleston off, showing the wall and dice, and a choice of call time.
@@ -186,7 +188,7 @@ Suggested order (the first three show up in search results):
 5. `03-detail`: one hand, large.
 6. `06-charleston`: choosing tiles to pass.
 7. `07-tiles`: How to play, every tile.
-8. `08-menu`: the start menu.
+8. `08-menu`: the start menu. (Shows the old start menu; retake it for the next version.)
 
 The iPad set has the same names, without `06-charleston`.
 

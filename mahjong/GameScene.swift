@@ -48,6 +48,10 @@ final class GameScene: SKScene {
         case gameMenu
         /// Features on the way.
         case comingSoon
+        /// Game settings: Charleston, wall and dice, call time, sound.
+        case options
+        /// The extras: what's next, feedback, the tip jar and the store.
+        case more
     }
 
 
@@ -971,8 +975,12 @@ final class GameScene: SKScene {
 
     // MARK: - Store
 
-    private func openTipJar() {
+    /// Where the tip jar's Close button goes back to.
+    private var tipReturn: Overlay = .more
+
+    private func openTipJar(returningTo back: Overlay = .more) {
         storeMessage = ""
+        tipReturn = back
         show(.tipJar)
     }
 
@@ -1989,7 +1997,9 @@ final class GameScene: SKScene {
         var width = min(size.width - 32 * m.u, 360 * m.u)
         let height: CGFloat
         switch overlay {
-        case .menu: height = 592 * m.u
+        case .menu: height = (store.ownsEverything ? 398 : 452) * m.u
+        case .options: height = (round != nil ? 510 : 484) * m.u
+        case .more: height = CGFloat(ComingSoon.items.isEmpty ? 300 : 352) * m.u
         case .comingSoon:
             let lines = comingSoonLines(width: width, u: m.u).reduce(0) { $0 + $1.frame.height + 16 * m.u }
             height = min(lines + 165 * m.u, fullHeight)
@@ -2008,7 +2018,7 @@ final class GameScene: SKScene {
         case .summary:
             width = min(size.width - 24 * m.u, 420 * m.u)
             height = 470 * m.u
-        case .gameMenu: height = 484 * m.u
+        case .gameMenu: height = 432 * m.u
         }
         let panel = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 18 * m.u)
         panel.position = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -2053,6 +2063,10 @@ final class GameScene: SKScene {
             buildGameMenu(in: panel, width: width, m: m)
         case .comingSoon:
             buildComingSoon(in: panel, width: width, height: height, m: m)
+        case .options:
+            buildOptions(in: panel, width: width, height: height, m: m)
+        case .more:
+            buildMore(in: panel, width: width, height: height, m: m)
         }
     }
 
@@ -2103,55 +2117,18 @@ final class GameScene: SKScene {
         let u = m.u
         let lock = " \u{1F512}"
         let unlocked = store.hasFullGame
-        add(Style.label("Mahjong", size: 44 * u, font: Style.bold, color: Style.gold), to: panel, y: 248 * u)
+        let top = (store.ownsEverything ? 398 : 452) * u / 2
+        add(Style.label("Mahjong", size: 44 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 50 * u)
         add(Style.label("American style · You and three bots", size: 14 * u, color: SKColor(white: 1, alpha: 0.8)),
-            to: panel, y: 214 * u)
-
-        let sound = secondary(Sounds.shared.isMuted ? "Sound off" : "Sound on",
-                              size: CGSize(width: 76 * u, height: 22 * u), fontSize: 11 * u) { [weak self] in
-            Sounds.shared.isMuted.toggle()
-            self?.rebuildOverlay()
-        }
-        add(sound, to: panel, x: width / 2 - 50 * u, y: 275 * u)
+            to: panel, y: top - 84 * u)
 
         let wide = CGSize(width: width - 40 * u, height: 40 * u)
-        add(Style.label("Card", size: 14 * u, font: Style.bold), to: panel, y: 176 * u)
+        let half = CGSize(width: (width - 52 * u) / 2, height: 40 * u)
+        add(Style.label("Card", size: 14 * u, font: Style.bold), to: panel, y: top - 120 * u)
         let cardButton = ButtonNode.plain(text: chosenCard.title + "  ›", size: wide, fontSize: 15 * u) { [weak self] in
             self?.show(.cards)
         }
-        add(cardButton, to: panel, y: 142 * u)
-
-        add(Style.label("Options", size: 14 * u, font: Style.bold), to: panel, y: 104 * u)
-        let half = CGSize(width: (width - 52 * u) / 2, height: 40 * u)
-        let charlestonButton = ButtonNode.plain(text: "Charleston: \(charleston ? "On" : "Off")" + (unlocked ? "" : lock),
-                                                size: half, fontSize: 14 * u, selected: charleston) { [weak self] in
-            guard let self else { return }
-            if !unlocked { self.openStore(); return }
-            self.charleston.toggle()
-            self.rebuildOverlay()
-        }
-        add(charlestonButton, to: panel, x: -(half.width / 2 + 6 * u), y: 70 * u)
-        let wallButton = ButtonNode.plain(text: "Wall & dice: \(wallAndDice ? "On" : "Off")" + (unlocked ? "" : lock),
-                                          size: half, fontSize: 14 * u, selected: wallAndDice) { [weak self] in
-            guard let self else { return }
-            if !unlocked { self.openStore(); return }
-            self.wallAndDice.toggle()
-            self.rebuildOverlay()
-        }
-        add(wallButton, to: panel, x: half.width / 2 + 6 * u, y: 70 * u)
-
-        add(Style.label("Time to call each discard", size: 14 * u, font: Style.bold), to: panel, y: 32 * u)
-        let third = CGSize(width: (width - 56 * u) / 3, height: 40 * u)
-        for (index, seconds) in GameScene.callTimes.enumerated() {
-            let locked = seconds != 3 && !unlocked
-            let button = ButtonNode.plain(text: "\(Int(seconds)) sec" + (locked ? lock : ""), size: third, fontSize: 15 * u,
-                                          selected: callSeconds == seconds) { [weak self] in
-                if locked { self?.openStore(); return }
-                self?.callSeconds = seconds
-                self?.rebuildOverlay()
-            }
-            add(button, to: panel, x: CGFloat(index - 1) * (third.width + 8 * u), y: -2 * u)
-        }
+        add(cardButton, to: panel, y: top - 154 * u)
 
         // The scorepad: your running total, and a way to start a fresh sheet.
         let tally = scorepad.handsPlayed == 0
@@ -2160,65 +2137,151 @@ final class GameScene: SKScene {
         let tallyLabel = Style.label(tally, size: 13 * u, color: Style.faint)
         if scorepad.handsPlayed > 0 {
             tallyLabel.horizontalAlignmentMode = .left
-            add(tallyLabel, to: panel, x: -width / 2 + 22 * u, y: -40 * u)
+            add(tallyLabel, to: panel, x: -width / 2 + 22 * u, y: top - 198 * u)
             let clear = secondary("Clear", size: CGSize(width: 64 * u, height: 26 * u), fontSize: 12 * u) { [weak self] in
                 self?.show(.clearConfirm)
             }
-            add(clear, to: panel, x: width / 2 - 54 * u, y: -40 * u)
+            add(clear, to: panel, x: width / 2 - 54 * u, y: top - 198 * u)
         } else {
-            add(tallyLabel, to: panel, y: -40 * u)
+            add(tallyLabel, to: panel, y: top - 198 * u)
         }
 
         let primary = CGSize(width: half.width, height: 50 * u)
+        let left = -(half.width / 2 + 6 * u), right = half.width / 2 + 6 * u
         if savedHand != nil {
             let resume = ButtonNode(text: "Resume hand", size: primary, fontSize: 17 * u) { [weak self] in
                 self?.resumeHand()
             }
-            add(resume, to: panel, x: -(half.width / 2 + 6 * u), y: -86 * u)
+            add(resume, to: panel, x: left, y: top - 246 * u)
             let fresh = secondary("New hand", size: primary, fontSize: 17 * u) { [weak self] in
                 self?.show(.newHandConfirm)
             }
-            add(fresh, to: panel, x: half.width / 2 + 6 * u, y: -86 * u)
+            add(fresh, to: panel, x: right, y: top - 246 * u)
         } else {
             let deal = ButtonNode(text: "Deal", size: CGSize(width: width - 40 * u, height: 50 * u), fontSize: 20 * u) {
                 [weak self] in self?.dealNewHand()
             }
-            add(deal, to: panel, y: -86 * u)
+            add(deal, to: panel, y: top - 246 * u)
         }
 
         let small = CGSize(width: half.width, height: 44 * u)
         let help = secondary("How to play", size: small, fontSize: 16 * u) { [weak self] in
             self?.show(.help(page: 0))
         }
-        add(help, to: panel, x: -(half.width / 2 + 6 * u), y: -146 * u)
+        add(help, to: panel, x: left, y: top - 304 * u)
         let historyButton = secondary("History" + (unlocked ? "" : lock), size: small, fontSize: 16 * u) { [weak self] in
             if unlocked { self?.show(.history) } else { self?.openStore() }
         }
-        add(historyButton, to: panel, x: half.width / 2 + 6 * u, y: -146 * u)
-        let storeButton = secondary(store.ownsEverything ? "Full game ✓" : (unlocked ? "This year's card" : "Unlock full game"),
-                                    size: small, fontSize: 15 * u, color: Style.gold) { [weak self] in
-            self?.openStore()
+        add(historyButton, to: panel, x: right, y: top - 304 * u)
+        let optionsButton = secondary("Options", size: small, fontSize: 16 * u) { [weak self] in
+            self?.openOptions(returningTo: .menu)
         }
-        add(storeButton, to: panel, x: -(half.width / 2 + 6 * u), y: -198 * u)
-        let tipButton = secondary("Tip jar", size: small, fontSize: 16 * u, color: Style.gold) { [weak self] in
-            self?.openTipJar()
+        add(optionsButton, to: panel, x: left, y: top - 356 * u)
+        let moreButton = secondary("More", size: small, fontSize: 16 * u) { [weak self] in
+            self?.show(.more)
         }
-        add(tipButton, to: panel, x: half.width / 2 + 6 * u, y: -198 * u)
+        add(moreButton, to: panel, x: right, y: top - 356 * u)
 
-        let row = CGSize(width: half.width, height: 36 * u)
-        let feedbackButton = secondary("Send feedback", size: ComingSoon.items.isEmpty ? CGSize(width: width - 40 * u, height: 36 * u) : row,
-                                       fontSize: 14 * u) { [weak self] in
-            self?.sendFeedback()
-        }
-        if ComingSoon.items.isEmpty {
-            add(feedbackButton, to: panel, y: -248 * u)
-        } else {
-            let next = secondary("What's next", size: row, fontSize: 14 * u) { [weak self] in
-                self?.show(.comingSoon)
+        // Until everything is bought, the way to buy it stays on the front page.
+        if !store.ownsEverything {
+            let storeButton = secondary(storeTitle, size: CGSize(width: width - 40 * u, height: 44 * u),
+                                        fontSize: 16 * u, color: Style.gold) { [weak self] in
+                self?.openStore()
             }
-            add(next, to: panel, x: -(half.width / 2 + 6 * u), y: -248 * u)
-            add(feedbackButton, to: panel, x: half.width / 2 + 6 * u, y: -248 * u)
+            add(storeButton, to: panel, y: top - 410 * u)
         }
+    }
+
+    /// What the store button says: what's left to buy, or that you have it all.
+    private var storeTitle: String {
+        store.ownsEverything ? "Full game ✓" : (store.hasFullGame ? "This year's card" : "Unlock full game")
+    }
+
+    /// Where the options panel's Done button goes back to.
+    private var optionsReturn: Overlay = .menu
+
+    private func openOptions(returningTo back: Overlay) {
+        optionsReturn = back
+        show(.options)
+    }
+
+    /// Every setting in one place, from the start menu or the game menu.
+    private func buildOptions(in panel: SKNode, width: CGFloat, height: CGFloat, m: Metrics) {
+        let u = m.u
+        let lock = " \u{1F512}"
+        let unlocked = store.hasFullGame
+        let top = height / 2
+        add(Style.label("Options", size: 24 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 40 * u)
+
+        let half = CGSize(width: (width - 52 * u) / 2, height: 40 * u)
+        let left = -(half.width / 2 + 6 * u), right = half.width / 2 + 6 * u
+        var y = top - 84 * u
+
+        /// A heading and an On / Off pair. `free` is the choice that needs no purchase.
+        func toggle(_ title: String, isOn: Bool, free: Bool?, set: @escaping (Bool) -> Void) {
+            add(Style.label(title, size: 14 * u, font: Style.bold), to: panel, y: y)
+            for (on, x) in [(true, left), (false, right)] {
+                let locked = free != nil && on != free && !unlocked
+                let button = ButtonNode.plain(text: (on ? "On" : "Off") + (locked ? lock : ""), size: half,
+                                              fontSize: 15 * u, selected: isOn == on) { [weak self] in
+                    guard let self else { return }
+                    if locked { self.openStore(returningTo: .options); return }
+                    set(on)
+                    self.rebuildOverlay()
+                }
+                add(button, to: panel, x: x, y: y - 34 * u)
+            }
+            y -= 84 * u
+        }
+
+        toggle("Charleston", isOn: charleston, free: true) { [weak self] in self?.charleston = $0 }
+        toggle("Wall & dice", isOn: wallAndDice, free: false) { [weak self] in self?.wallAndDice = $0 }
+
+        add(Style.label("Time to call each discard", size: 14 * u, font: Style.bold), to: panel, y: y)
+        let third = CGSize(width: (width - 56 * u) / 3, height: 40 * u)
+        for (index, seconds) in GameScene.callTimes.enumerated() {
+            let locked = seconds != 3 && !unlocked
+            let button = ButtonNode.plain(text: "\(Int(seconds)) sec" + (locked ? lock : ""), size: third, fontSize: 15 * u,
+                                          selected: callSeconds == seconds) { [weak self] in
+                if locked { self?.openStore(returningTo: .options); return }
+                self?.callSeconds = seconds
+                self?.rebuildOverlay()
+            }
+            add(button, to: panel, x: CGFloat(index - 1) * (third.width + 8 * u), y: y - 34 * u)
+        }
+        y -= 84 * u
+
+        toggle("Sound", isOn: !Sounds.shared.isMuted, free: nil) { Sounds.shared.isMuted = !$0 }
+
+        if round != nil {
+            add(Style.label("Charleston and Wall & dice start with the next hand.", size: 12 * u, color: Style.faint),
+                to: panel, y: y + 4 * u)
+        }
+        let done = secondary("Done", size: CGSize(width: width - 40 * u, height: 44 * u), fontSize: 17 * u) {
+            [weak self] in guard let self else { return }; self.show(self.optionsReturn)
+        }
+        add(done, to: panel, y: -top + 36 * u)
+    }
+
+    /// The extras that don't need to be on the front page.
+    private func buildMore(in panel: SKNode, width: CGFloat, height: CGFloat, m: Metrics) {
+        let u = m.u
+        let top = height / 2
+        add(Style.label("More", size: 24 * u, font: Style.bold, color: Style.gold), to: panel, y: top - 40 * u)
+        let wide = CGSize(width: width - 40 * u, height: 44 * u)
+        var y = top - 92 * u
+        func row(_ text: String, color: SKColor = .white, action: @escaping () -> Void) {
+            add(secondary(text, size: wide, fontSize: 17 * u, color: color, action: action), to: panel, y: y)
+            y -= 52 * u
+        }
+        if !ComingSoon.items.isEmpty {
+            row("What's next") { [weak self] in self?.show(.comingSoon) }
+        }
+        row("Send feedback") { [weak self] in self?.sendFeedback() }
+        row("Tip jar", color: Style.gold) { [weak self] in self?.openTipJar(returningTo: .more) }
+        row(storeTitle, color: Style.gold) { [weak self] in self?.openStore(returningTo: .more) }
+        let close = secondary("Close", size: wide, fontSize: 17 * u) { [weak self] in self?.show(.menu) }
+        add(close, to: panel, y: -top + 36 * u)
     }
 
     private func buildConfirm(in panel: SKNode, width: CGFloat, m: Metrics,
@@ -2764,7 +2827,7 @@ final class GameScene: SKScene {
 
         let wide = CGSize(width: width - 40 * u, height: 46 * u)
         let tips = secondary("Tip jar", size: wide, fontSize: 17 * u, color: Style.gold) { [weak self] in
-            self?.openTipJar()
+            self?.openTipJar(returningTo: .store)
         }
         add(tips, to: panel, y: -160 * u)
         let close = secondary("Close", size: wide, fontSize: 18 * u) { [weak self] in
@@ -2801,7 +2864,7 @@ final class GameScene: SKScene {
         add(Style.label(storeMessage, size: 14 * u, font: Style.bold, color: Style.gold), to: panel, y: -70 * u)
 
         let close = secondary("Close", size: CGSize(width: width - 40 * u, height: 46 * u), fontSize: 18 * u) {
-            [weak self] in self?.show(.menu)
+            [weak self] in guard let self else { return }; self.show(self.tipReturn)
         }
         add(close, to: panel, y: -150 * u)
     }
@@ -2970,53 +3033,37 @@ final class GameScene: SKScene {
 
     private func buildGameMenu(in panel: SKNode, width: CGFloat, m: Metrics) {
         let u = m.u
-        add(Style.label("Game menu", size: 24 * u, font: Style.bold, color: Style.gold), to: panel, y: 204 * u)
+        add(Style.label("Game menu", size: 24 * u, font: Style.bold, color: Style.gold), to: panel, y: 178 * u)
 
         let wide = CGSize(width: width - 40 * u, height: 44 * u)
         let back = ButtonNode(text: "Back to game", size: wide, fontSize: 18 * u) { [weak self] in
             self?.closeOverlay()
         }
-        add(back, to: panel, y: 150 * u)
-        let sound = secondary(Sounds.shared.isMuted ? "Sound: off" : "Sound: on", size: wide, fontSize: 17 * u) {
-            [weak self] in
-            Sounds.shared.isMuted.toggle()
-            self?.rebuildOverlay()
+        add(back, to: panel, y: 124 * u)
+        let options = secondary("Options", size: wide, fontSize: 17 * u) { [weak self] in
+            self?.openOptions(returningTo: .gameMenu)
         }
-        add(sound, to: panel, y: 98 * u)
-        let timeLocked = !store.hasFullGame
-        let time = secondary("Time to call: \(Int(callSeconds)) sec" + (timeLocked ? " \u{1F512}" : ""),
-                             size: wide, fontSize: 17 * u) { [weak self] in
-            guard let self else { return }
-            if timeLocked {
-                self.openStore(returningTo: .gameMenu)
-                return
-            }
-            let times = GameScene.callTimes
-            let index = times.firstIndex(of: self.callSeconds) ?? 0
-            self.callSeconds = times[(index + 1) % times.count]
-            self.rebuildOverlay()
-        }
-        add(time, to: panel, y: 46 * u)
+        add(options, to: panel, y: 72 * u)
         // Only the card in play: that's the one that matters mid-hand.
         let cardID = round?.card.id ?? chosenCard.id
         let seeCard = secondary("See the card", size: wide, fontSize: 17 * u) { [weak self] in
             self?.handsReturn = .gameMenu
             self?.show(.cardHands(id: cardID, page: 0))
         }
-        add(seeCard, to: panel, y: -6 * u)
+        add(seeCard, to: panel, y: 20 * u)
         let help = secondary("How to play", size: wide, fontSize: 17 * u) { [weak self] in
             self?.show(.help(page: 0))
         }
-        add(help, to: panel, y: -58 * u)
+        add(help, to: panel, y: -32 * u)
         let feedbackButton = secondary("Send feedback", size: wide, fontSize: 17 * u) { [weak self] in
             self?.sendFeedback()
         }
-        add(feedbackButton, to: panel, y: -110 * u)
+        add(feedbackButton, to: panel, y: -84 * u)
         let menu = secondary("Main menu", size: wide, fontSize: 17 * u) { [weak self] in
             self?.goToMainMenu()
         }
-        add(menu, to: panel, y: -162 * u)
-        add(Style.label("The game waits while this menu is open.", size: 12 * u, color: Style.faint), to: panel, y: -204 * u)
+        add(menu, to: panel, y: -136 * u)
+        add(Style.label("The game waits while this menu is open.", size: 12 * u, color: Style.faint), to: panel, y: -178 * u)
     }
 
     /// Features on the way, from ComingSoon.swift.
@@ -3041,7 +3088,7 @@ final class GameScene: SKScene {
             y -= h + 16 * u
         }
         let close = secondary("Close", size: CGSize(width: width - 40 * u, height: 44 * u), fontSize: 17 * u) {
-            [weak self] in self?.show(.menu)
+            [weak self] in self?.show(.more)
         }
         add(close, to: panel, y: -height / 2 + 36 * u)
     }
